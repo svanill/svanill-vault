@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use std::io::Read;
 use structopt::StructOpt;
+use svanill_store::sdk::ls;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -34,7 +35,7 @@ fn main() -> Result<()> {
 
     match opt.cmd {
         Command::LIST {} => {
-            println!("{}", "let's jam");
+            println!("{:?}", ls("let's jam".as_bytes()));
         }
     };
 
