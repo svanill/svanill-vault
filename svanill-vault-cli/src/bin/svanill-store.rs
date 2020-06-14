@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use std::io::Read;
 use structopt::StructOpt;
-use svanill_store::sdk::ls;
+use svanill_store::sdk::{ls, Config};
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -33,9 +33,17 @@ fn main() -> Result<()> {
         .read_to_end(&mut key)
         .with_context(|| "Couldn't read from STDIN")?;
 
+    let token = "";
+
+    let conf = Config {
+        host: opt.host,
+        username: String::from("m"),
+        token: String::from(token),
+    };
+
     match opt.cmd {
         Command::LIST {} => {
-            println!("{:?}", ls("let's jam".as_bytes()));
+            println!("{:?}", ls(conf));
         }
     };
 
