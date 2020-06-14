@@ -12,3 +12,4 @@ structopt = "0.3.14"
 atty = "0.2.14"
 anyhow = "1.0.31"
 thiserror = "1.0.19"
+serde = { version = "1.0.111", features = ["derive"] }
