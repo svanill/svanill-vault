@@ -11,7 +11,6 @@ docker run -u $(id -u) --rm -v ${PWD}/tmp_build:/local \
     openapitools/openapi-generator-cli \
     generate \
     -g rust \
-    --global-property=models \
     --global-property=modelDocs=false \
     -i /local/openapi3.yml \
     -o /local/out/
