@@ -1,15 +1,15 @@
-use super::Config;
+use crate::config::Config;
 use crate::models::{
     RetrieveListOfUserFilesResponse, RetrieveListOfUserFilesResponseContentItemContent,
 };
 use crate::sdk::response_error::{ResponseError, SdkError};
 
 pub fn ls(
-    conf: Config,
+    conf: &Config,
 ) -> Result<Vec<RetrieveListOfUserFilesResponseContentItemContent>, SdkError> {
     let client = reqwest::blocking::Client::new();
-    let url = format!("{}/files/", conf.host);
-    let res = client.get(&url).bearer_auth(conf.token).send()?;
+    let url = format!("{}/files/", conf.base_url);
+    let res = client.get(&url).bearer_auth(&conf.token).send()?;
 
     let status = res.status();
     let content = res.text()?;
