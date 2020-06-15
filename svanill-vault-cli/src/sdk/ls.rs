@@ -2,7 +2,7 @@ use crate::config::Config;
 use crate::models::{
     RetrieveListOfUserFilesResponse, RetrieveListOfUserFilesResponseContentItemContent,
 };
-use crate::sdk::response_error::{ResponseError, SdkError};
+use crate::sdk::response_error::SdkError;
 
 pub fn ls(
     conf: &Config,
@@ -23,10 +23,5 @@ pub fn ls(
         }
     };
 
-    match serde_json::from_str::<ResponseError>(&content) {
-        Ok(parsed_err) => Err(parsed_err.into()),
-        Err(_) => Err(SdkError::UnexpectedError {
-            status: status.as_u16().into(),
-        }),
-    }
+    vault_error!(status, content)
 }

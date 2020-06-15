@@ -2,7 +2,7 @@ use crate::config::Config;
 use crate::models::{
     AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
 };
-use crate::sdk::response_error::{ResponseError, SdkError};
+use crate::sdk::response_error::SdkError;
 
 pub fn request_challenge(conf: &Config) -> Result<String, SdkError> {
     let client = reqwest::blocking::Client::new();
@@ -23,12 +23,7 @@ pub fn request_challenge(conf: &Config) -> Result<String, SdkError> {
         }
     };
 
-    match serde_json::from_str::<ResponseError>(&content) {
-        Ok(parsed_err) => Err(parsed_err.into()),
-        Err(_) => Err(SdkError::UnexpectedError {
-            status: status.as_u16().into(),
-        }),
-    }
+    vault_error!(status, content)
 }
 
 pub fn answer_challenge(conf: &Config, answer: &str) -> Result<String, SdkError> {
@@ -53,10 +48,5 @@ pub fn answer_challenge(conf: &Config, answer: &str) -> Result<String, SdkError>
         }
     };
 
-    match serde_json::from_str::<ResponseError>(&content) {
-        Ok(parsed_err) => Err(parsed_err.into()),
-        Err(_) => Err(SdkError::UnexpectedError {
-            status: status.as_u16().into(),
-        }),
-    }
+    vault_error!(status, content)
 }

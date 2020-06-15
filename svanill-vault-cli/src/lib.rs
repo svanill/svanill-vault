@@ -5,4 +5,6 @@ extern crate serde_json;
 
 pub mod config;
 pub mod models;
+
+#[macro_use]
 pub mod sdk;
