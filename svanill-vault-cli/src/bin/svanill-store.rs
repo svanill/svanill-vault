@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use std::io::Read;
 use structopt::StructOpt;
 use svanill_store::config::Config;
-use svanill_store::sdk::{ls};
+use svanill_store::sdk::{answer_challenge, ls, request_challenge};
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -16,6 +16,9 @@ struct Opt {
     /// Svanill store username
     #[structopt(short, long)]
     username: Option<String>,
+    /// Svanill store answer to the challenge
+    #[structopt(short, long)]
+    answer: Option<String>,
     #[structopt(subcommand)]
     cmd: Command,
 }
@@ -42,6 +45,23 @@ fn main() -> Result<()> {
         conf.username = opt.username.unwrap();
         conf_updated = true;
     }
+
+    let challenge = request_challenge(&conf)?;
+
+    if opt.answer == None && conf.challenges.get(&challenge) == None {
+        eprintln!("Cannot authenticate. Challenge is:");
+        eprintln!("{}", challenge);
+        eprintln!("You need to provide the answer with the --answer option (will be stored in your config on success)");
+        std::process::exit(1);
+    }
+
+    if let Some(x) = opt.answer {
+        conf.challenges.insert(challenge.clone(), x);
+        conf_updated = true;
+    }
+
+    let answer = conf.challenges.get(&challenge).unwrap();
+    conf.token = answer_challenge(&conf, answer)?;
 
     if conf_updated {
         confy::store(&cli_name, &conf)?;
