@@ -2,7 +2,10 @@ use anyhow::{Context, Result};
 use std::io::Read;
 use structopt::StructOpt;
 use svanill_store::config::Config;
-use svanill_store::sdk::{answer_challenge, ls, request_challenge};
+use svanill_store::{
+    models::RetrieveListOfUserFilesResponseContentItemContent,
+    sdk::{answer_challenge, ls, request_challenge},
+};
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -10,6 +13,9 @@ use svanill_store::sdk::{answer_challenge, ls, request_challenge};
     about = "Read/Write data from/to a svanill store server"
 )]
 struct Opt {
+    /// switch on verbosity
+    #[structopt(short)]
+    verbose: bool,
     /// Svanill store host
     #[structopt(short = "h", default_value = "https://api.svanill.com")]
     host: String,
@@ -29,6 +35,18 @@ enum Command {
     LIST {},
 }
 
+fn output_files_list(opt: &Opt, v: Vec<RetrieveListOfUserFilesResponseContentItemContent>) {
+    for f in v.iter() {
+        println!("checksum: {}", f.checksum);
+        println!("filename: {}", f.filename);
+        println!("size: {}", f.size);
+        if opt.verbose {
+            println!("url: {}", f.url);
+        }
+        println!("---");
+    }
+}
+
 fn main() -> Result<()> {
     let opt = Opt::from_args();
 
@@ -42,7 +60,7 @@ fn main() -> Result<()> {
     let mut conf_updated = false;
 
     if conf.username == "" && opt.username != None {
-        conf.username = opt.username.unwrap();
+        conf.username = opt.username.clone().unwrap();
         conf_updated = true;
     }
 
@@ -55,8 +73,8 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
 
-    if let Some(x) = opt.answer {
-        conf.challenges.insert(challenge.clone(), x);
+    if let Some(x) = &opt.answer {
+        conf.challenges.insert(challenge.clone(), x.clone());
         conf_updated = true;
     }
 
@@ -69,7 +87,7 @@ fn main() -> Result<()> {
 
     match opt.cmd {
         Command::LIST {} => {
-            println!("{:?}", ls(&conf)?);
+            output_files_list(&opt, ls(&conf)?);
         }
     };
 
