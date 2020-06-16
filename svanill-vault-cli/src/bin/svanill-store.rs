@@ -1,5 +1,9 @@
 use anyhow::{Context, Result};
-use std::io::{self, Read};
+use std::{
+    fs::File,
+    io::{self, Read, Write},
+    path::PathBuf,
+};
 use structopt::StructOpt;
 use svanill_store::config::Config;
 use svanill_store::{
@@ -34,7 +38,11 @@ enum Command {
     #[structopt(name = "ls", alias = "list")]
     LIST {},
     #[structopt(name = "pull")]
-    PULL {},
+    PULL {
+        /// Output file, use stdout if not present
+        #[structopt(short = "o", name = "output file", parse(from_os_str))]
+        output: Option<PathBuf>,
+    },
 }
 
 fn output_files_list(opt: &Opt, v: Vec<RetrieveListOfUserFilesResponseContentItemContent>) {
@@ -91,12 +99,20 @@ fn main() -> Result<()> {
         Command::LIST {} => {
             output_files_list(&opt, ls(&conf)?);
         }
-        Command::PULL {} => {
+        Command::PULL { output } => {
             let files = ls(&conf)?;
             if !files.is_empty() {
                 let mut f: &[u8] = &retrieve(&files[0].url)?;
+
                 let stdout = io::stdout();
-                let mut handle = stdout.lock();
+                let mut handle: Box<dyn Write> = match output {
+                    Some(path) => Box::new(
+                        File::create(&path)
+                            .with_context(|| format!("trying to write onto file {:?}", path))?,
+                    ),
+                    None => Box::new(stdout.lock()),
+                };
+
                 std::io::copy(&mut f, &mut handle)?;
             }
         }
