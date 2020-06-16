@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use std::{
     fs::File,
     io::{self, Read, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 use structopt::StructOpt;
 use svanill_store::config::Config;
@@ -42,6 +42,9 @@ enum Command {
         /// Output file, use stdout if not present
         #[structopt(short = "o", name = "output file", parse(from_os_str))]
         output: Option<PathBuf>,
+        /// Write on disk reusing the external filename
+        #[structopt(short, long)]
+        use_external_name: bool,
     },
 }
 
@@ -99,13 +102,23 @@ fn main() -> Result<()> {
         Command::LIST {} => {
             output_files_list(&opt, ls(&conf)?);
         }
-        Command::PULL { output } => {
+        Command::PULL {
+            output,
+            use_external_name,
+        } => {
             let files = ls(&conf)?;
             if !files.is_empty() {
-                let mut f: &[u8] = &retrieve(&files[0].url)?;
+                let f = &files[0];
+                let mut f_content: &[u8] = &retrieve(&f.url)?;
+
+                let opt_path: Option<PathBuf> = match use_external_name {
+                    // ensure we don't get a path by extracting the filename
+                    true => Path::new(&f.filename).file_name().map(PathBuf::from),
+                    false => output,
+                };
 
                 let stdout = io::stdout();
-                let mut handle: Box<dyn Write> = match output {
+                let mut handle: Box<dyn Write> = match opt_path {
                     Some(path) => Box::new(
                         File::create(&path)
                             .with_context(|| format!("trying to write onto file {:?}", path))?,
@@ -113,7 +126,7 @@ fn main() -> Result<()> {
                     None => Box::new(stdout.lock()),
                 };
 
-                std::io::copy(&mut f, &mut handle)?;
+                std::io::copy(&mut f_content, &mut handle)?;
             }
         }
     };
