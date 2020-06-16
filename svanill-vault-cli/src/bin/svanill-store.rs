@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
-use std::io::Read;
+use std::io::{self, Read};
 use structopt::StructOpt;
 use svanill_store::config::Config;
 use svanill_store::{
     models::RetrieveListOfUserFilesResponseContentItemContent,
-    sdk::{answer_challenge, ls, request_challenge},
+    sdk::{answer_challenge, ls, request_challenge, retrieve},
 };
 
 #[derive(Debug, StructOpt)]
@@ -33,6 +33,8 @@ struct Opt {
 enum Command {
     #[structopt(name = "ls", alias = "list")]
     LIST {},
+    #[structopt(name = "pull")]
+    PULL {},
 }
 
 fn output_files_list(opt: &Opt, v: Vec<RetrieveListOfUserFilesResponseContentItemContent>) {
@@ -88,6 +90,15 @@ fn main() -> Result<()> {
     match opt.cmd {
         Command::LIST {} => {
             output_files_list(&opt, ls(&conf)?);
+        }
+        Command::PULL {} => {
+            let files = ls(&conf)?;
+            if !files.is_empty() {
+                let mut f: &[u8] = &retrieve(&files[0].url)?;
+                let stdout = io::stdout();
+                let mut handle = stdout.lock();
+                std::io::copy(&mut f, &mut handle)?;
+            }
         }
     };
 

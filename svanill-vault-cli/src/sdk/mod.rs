@@ -14,5 +14,6 @@ pub use ls::ls;
 mod auth;
 pub use auth::answer_challenge;
 pub use auth::request_challenge;
-
+mod files;
+pub use files::retrieve;
 mod response_error;
