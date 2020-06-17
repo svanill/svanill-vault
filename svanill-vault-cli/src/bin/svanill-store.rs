@@ -39,12 +39,12 @@ enum Command {
     LIST {},
     #[structopt(name = "pull")]
     PULL {
-        /// Output file, use stdout if not present
-        #[structopt(short = "o", name = "output file", parse(from_os_str))]
-        output: Option<PathBuf>,
-        /// Write on disk reusing the external filename
-        #[structopt(short, long)]
-        use_external_name: bool,
+        /// Write output to <file> instead of stdout
+        #[structopt(short = "o", long = "output", name = "file", parse(from_os_str))]
+        output_file: Option<PathBuf>,
+        /// Write output to a local file named like the remote file. Existing file will be overwritten
+        #[structopt(short = "O", long = "remote-name")]
+        use_remote_name: bool,
     },
 }
 
@@ -103,18 +103,18 @@ fn main() -> Result<()> {
             output_files_list(&opt, ls(&conf)?);
         }
         Command::PULL {
-            output,
-            use_external_name,
+            output_file,
+            use_remote_name,
         } => {
             let files = ls(&conf)?;
             if !files.is_empty() {
                 let f = &files[0];
                 let mut f_content: &[u8] = &retrieve(&f.url)?;
 
-                let opt_path: Option<PathBuf> = match use_external_name {
-                    // ensure we don't get a path by extracting the filename
+                let opt_path: Option<PathBuf> = match use_remote_name {
+                    // attempt to convert the remote name to a filename
                     true => Path::new(&f.filename).file_name().map(PathBuf::from),
-                    false => output,
+                    false => output_file,
                 };
 
                 let stdout = io::stdout();
