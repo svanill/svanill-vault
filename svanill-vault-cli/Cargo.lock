@@ -955,6 +955,7 @@ dependencies = [
  "anyhow",
  "atty",
  "confy",
+ "rand",
  "reqwest",
  "serde",
  "serde_json",

@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use atty::Stream;
 use std::{
     fs::File,
     io::{self, Read, Write},
@@ -6,6 +7,7 @@ use std::{
 };
 use structopt::StructOpt;
 use svanill_store::config::Config;
+use svanill_store::utils::gen_random_filename;
 use svanill_store::{
     models::RetrieveListOfUserFilesResponseContentItemContent,
     sdk::{answer_challenge, ls, request_challenge, retrieve},
@@ -46,6 +48,15 @@ enum Command {
         #[structopt(short = "O", long = "remote-name")]
         use_remote_name: bool,
     },
+    #[structopt(name = "push")]
+    PUSH {
+        /// Read input from <file> instead of stdin
+        #[structopt(short = "i", long = "input", name = "file", parse(from_os_str))]
+        input_file: Option<PathBuf>,
+        /// Use the local file name as remote name (requires -i to point to an existing file). If this flag is not provided a random name will be used instead
+        #[structopt(short = "l", long = "local-name")]
+        use_local_name: bool,
+    },
 }
 
 fn output_files_list(opt: &Opt, v: Vec<RetrieveListOfUserFilesResponseContentItemContent>) {
@@ -63,10 +74,36 @@ fn output_files_list(opt: &Opt, v: Vec<RetrieveListOfUserFilesResponseContentIte
 fn main() -> Result<()> {
     let opt = Opt::from_args();
 
-    let mut key = Vec::new();
-    std::io::stdin()
-        .read_to_end(&mut key)
-        .with_context(|| "Couldn't read from STDIN")?;
+    // Check some options validity before attempting network requests
+    if let Command::PUSH {
+        use_local_name,
+        ref input_file,
+    } = opt.cmd
+    {
+        let mut input_file = input_file.clone();
+        if Some(PathBuf::from("-")) == input_file {
+            input_file = None;
+        }
+
+        if use_local_name && input_file == None {
+            eprintln!(
+                    "ERROR: you cannot pipe data in and request to use the local filename at the same time"
+                );
+            std::process::exit(1);
+        }
+
+        match input_file {
+            None if !atty::is(Stream::Stdin) => {
+                eprintln!("ERROR: not a tty");
+                std::process::exit(1);
+            }
+            Some(x) if !x.exists() => {
+                eprintln!("ERROR: input file does not exist");
+                std::process::exit(1);
+            }
+            _ => (),
+        }
+    }
 
     let cli_name = "svanill-store-cli";
     let mut conf: Config = confy::load(&cli_name)?;
@@ -128,6 +165,45 @@ fn main() -> Result<()> {
 
                 std::io::copy(&mut f_content, &mut handle)?;
             }
+        }
+        Command::PUSH {
+            ref input_file,
+            use_local_name,
+        } => {
+            let mut input_file = input_file.clone();
+            if Some(PathBuf::from("-")) == input_file {
+                input_file = None;
+            }
+
+            let mut local_content = Vec::new();
+
+            match input_file {
+                Some(ref path) if path.exists() => {
+                    File::open(&path)
+                        .with_context(|| format!("trying to read file {:?}", path))?
+                        .read_to_end(&mut local_content)?;
+                }
+                None => {
+                    std::io::stdin()
+                        .read_to_end(&mut local_content)
+                        .with_context(|| "Couldn't read from STDIN")?;
+                }
+                _ => panic!("Input file does not exist"),
+            }
+
+            let remote_name = if use_local_name {
+                Path::new(&input_file.unwrap())
+                    .file_name()
+                    .map(PathBuf::from)
+                    .unwrap()
+                    .to_string_lossy()
+                    .into()
+            } else {
+                gen_random_filename()
+            };
+
+            //let upload_url = request_upload_url(&conf)?;
+            println!("{:?} {:?}", remote_name, local_content);
         }
     };
 
