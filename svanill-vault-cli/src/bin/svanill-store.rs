@@ -93,8 +93,8 @@ fn main() -> Result<()> {
         }
 
         match input_file {
-            None if !atty::is(Stream::Stdin) => {
-                eprintln!("ERROR: not a tty");
+            None if atty::is(Stream::Stdin) => {
+                eprintln!("ERROR: no data piped in");
                 std::process::exit(1);
             }
             Some(x) if !x.exists() => {
