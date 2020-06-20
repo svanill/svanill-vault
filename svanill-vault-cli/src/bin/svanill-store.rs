@@ -206,9 +206,14 @@ fn main() -> Result<()> {
 
             upload(
                 links.upload_url,
-                remote_name,
+                remote_name.clone(),
                 String::from_utf8(local_content)?,
             )?;
+
+            println!(
+                "Successfully pushed file, using as remote name \"{}\"",
+                remote_name
+            );
         }
     };
 
