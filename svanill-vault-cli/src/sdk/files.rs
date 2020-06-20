@@ -1,10 +1,11 @@
 use crate::config::Config;
 use crate::models::{
-    HateoasFileUploadUrl, RequestUploadUrlRequestBody, RequestUploadUrlResponse,
-    RequestUploadUrlResponseLinks,
+    HateoasFileUploadUrl, RemoveFileResponse, RequestUploadUrlRequestBody,
+    RequestUploadUrlResponse, RequestUploadUrlResponseLinks,
 };
 use crate::sdk::response_error::SdkError;
 use md5::{Digest, Md5};
+use std::collections::HashMap;
 
 pub fn retrieve(url: &str) -> Result<Vec<u8>, SdkError> {
     let client = reqwest::blocking::Client::new();
@@ -96,6 +97,38 @@ pub fn upload(
 
     if status.is_success() {
         return Ok(());
+    };
+
+    vault_error!(status, content)
+}
+
+pub fn delete(conf: &Config, filename: &str) -> Result<(), SdkError> {
+    let client = reqwest::blocking::Client::new();
+    let url = format!("{}/files/", conf.base_url);
+
+    // Right now the server expect the filename as JSON body,
+    // in future it will expect it as query param.
+    // We provide both.
+
+    let mut request_body = HashMap::new();
+    request_body.insert("filename", filename);
+
+    let res = client
+        .delete(&url)
+        .bearer_auth(&conf.token)
+        .query(&[("filename", filename)])
+        .json(&request_body)
+        .send()?;
+
+    let status = res.status();
+    let content = res.text()?;
+
+    if status.is_success() {
+        let opt_entity: Option<RemoveFileResponse> = serde_json::from_str(&content).ok();
+
+        if opt_entity.is_some() {
+            return Ok(());
+        }
     };
 
     vault_error!(status, content)

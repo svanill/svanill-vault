@@ -10,7 +10,7 @@ use svanill_store::config::Config;
 use svanill_store::utils::gen_random_filename;
 use svanill_store::{
     models::RetrieveListOfUserFilesResponseContentItemContent,
-    sdk::{answer_challenge, ls, request_challenge, request_upload_url, retrieve, upload},
+    sdk::{answer_challenge, delete, ls, request_challenge, request_upload_url, retrieve, upload},
 };
 
 #[derive(Debug, StructOpt)]
@@ -56,6 +56,12 @@ enum Command {
         /// Use the local file name as remote name (requires -i to point to an existing file). If this flag is not provided a random name will be used instead
         #[structopt(short = "l", long = "local-name")]
         use_local_name: bool,
+    },
+    #[structopt(name = "rm")]
+    DELETE {
+        /// Read input from <file> instead of stdin
+        #[structopt(name = "file")]
+        remote_name: String,
     },
 }
 
@@ -138,6 +144,10 @@ fn main() -> Result<()> {
     match opt.cmd {
         Command::LIST {} => {
             output_files_list(&opt, ls(&conf)?);
+        }
+        Command::DELETE { remote_name } => {
+            delete(&conf, &remote_name)?;
+            println!("Success: deleted file \"{}\"", remote_name);
         }
         Command::PULL {
             output_file,

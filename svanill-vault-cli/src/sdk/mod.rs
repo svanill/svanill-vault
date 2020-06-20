@@ -16,6 +16,7 @@ mod auth;
 pub use auth::answer_challenge;
 pub use auth::request_challenge;
 mod files;
+pub use files::delete;
 pub use files::request_upload_url;
 pub use files::retrieve;
 pub use files::upload;
