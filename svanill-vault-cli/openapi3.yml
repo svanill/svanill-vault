@@ -455,7 +455,9 @@ components:
         rel:
           type: string
         form_data:
-          type: string
+          type: object
+          additionalProperties:
+            type: string
       x-examples:
         example:
           href: "http://example.com/files/request-upload-url"

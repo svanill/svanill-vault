@@ -10,7 +10,7 @@ use svanill_store::config::Config;
 use svanill_store::utils::gen_random_filename;
 use svanill_store::{
     models::RetrieveListOfUserFilesResponseContentItemContent,
-    sdk::{answer_challenge, ls, request_challenge, retrieve},
+    sdk::{answer_challenge, ls, request_challenge, request_upload_url, retrieve, upload},
 };
 
 #[derive(Debug, StructOpt)]
@@ -202,8 +202,13 @@ fn main() -> Result<()> {
                 gen_random_filename()
             };
 
-            //let upload_url = request_upload_url(&conf)?;
-            println!("{:?} {:?}", remote_name, local_content);
+            let links = request_upload_url(&conf, &remote_name)?;
+
+            upload(
+                links.upload_url,
+                remote_name,
+                String::from_utf8(local_content)?,
+            )?;
         }
     };
 

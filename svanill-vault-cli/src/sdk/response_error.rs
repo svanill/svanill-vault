@@ -20,6 +20,8 @@ pub enum SdkError {
     },
     #[error("Status: {status:?}, Unexpected error")]
     UnexpectedError { status: i32 },
+    #[error("Status: {status:?}, Content:\n{content}")]
+    CannotParseError { status: i32, content: String },
     #[error("NetworkError")]
     NetworkError(#[from] reqwest::Error),
 }
