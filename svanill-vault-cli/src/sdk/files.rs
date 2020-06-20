@@ -4,6 +4,7 @@ use crate::models::{
     RequestUploadUrlResponseLinks,
 };
 use crate::sdk::response_error::SdkError;
+use md5::{Digest, Md5};
 
 pub fn retrieve(url: &str) -> Result<Vec<u8>, SdkError> {
     let client = reqwest::blocking::Client::new();
@@ -42,6 +43,12 @@ pub fn request_upload_url(
     vault_error!(status, content)
 }
 
+fn md5sum(v: &str) -> String {
+    let mut hasher = Md5::new();
+    hasher.update(v);
+    format!("{:x}", hasher.finalize())
+}
+
 pub fn upload(
     upload_info: HateoasFileUploadUrl,
     remote_name: String,
@@ -57,6 +64,7 @@ pub fn upload(
         form = form.text(key, value);
     }
 
+    let checksum = md5sum(&content);
     let content_part = reqwest::blocking::multipart::Part::text(content)
         .file_name(remote_name)
         .mime_str("text/plain")?;
@@ -64,6 +72,24 @@ pub fn upload(
     form = form.part("file", content_part);
 
     let res = client.post(&url).multipart(form).send()?;
+
+    let etag = if res.headers().get("etag").is_none() {
+        ""
+    } else {
+        res.headers()
+            .get("etag")
+            .unwrap()
+            .to_str()
+            .unwrap_or("")
+            .trim_matches('"')
+    };
+
+    if etag != checksum {
+        return Err(SdkError::ChecksumMismatch {
+            local: checksum,
+            remote: etag.to_owned(),
+        });
+    }
 
     let status = res.status();
     let content = res.text()?;

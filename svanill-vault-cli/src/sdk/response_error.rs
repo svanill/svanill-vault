@@ -24,6 +24,8 @@ pub enum SdkError {
     CannotParseError { status: i32, content: String },
     #[error("NetworkError")]
     NetworkError(#[from] reqwest::Error),
+    #[error("Checksum mismatch:\n  local:  {local}\n  remote: {remote}")]
+    ChecksumMismatch { local: String, remote: String },
 }
 
 impl From<ResponseError> for SdkError {
