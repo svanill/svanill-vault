@@ -1,9 +1,9 @@
 [package]
-name = "svanill-store"
+name = "svanill-vault-cli"
 version = "0.1.0"
 authors = ["Riccardo Attilio Galli <riccardo@sideralis.org>"]
 edition = "2018"
-repository = "https://github.com/svanill/svanill-store-cli"
+repository = "https://github.com/svanill/svanill-vault-cli"
 license = "AGPL-3.0-or-later"
 readme = "README.md"
 

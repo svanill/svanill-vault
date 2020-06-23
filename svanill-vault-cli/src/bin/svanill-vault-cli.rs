@@ -6,29 +6,29 @@ use std::{
     path::{Path, PathBuf},
 };
 use structopt::StructOpt;
-use svanill_store::config::Config;
-use svanill_store::utils::gen_random_filename;
-use svanill_store::{
+use svanill_vault_cli::config::Config;
+use svanill_vault_cli::utils::gen_random_filename;
+use svanill_vault_cli::{
     models::RetrieveListOfUserFilesResponseContentItemContent,
     sdk::{answer_challenge, delete, ls, request_challenge, request_upload_url, retrieve, upload},
 };
 
 #[derive(Debug, StructOpt)]
 #[structopt(
-    name = "svanill-store",
-    about = "Read/Write data from/to a svanill store server"
+    name = "svanill-vault",
+    about = "Read/Write data from/to a svanill vault server"
 )]
 struct Opt {
     /// switch on verbosity
     #[structopt(short)]
     verbose: bool,
-    /// Svanill store host
+    /// Svanill vault host
     #[structopt(short = "h", default_value = "https://api.svanill.com")]
     host: String,
-    /// Svanill store username
+    /// Svanill vault username
     #[structopt(short, long)]
     username: Option<String>,
-    /// Svanill store answer to the challenge
+    /// Svanill vault answer to the challenge
     #[structopt(short, long)]
     answer: Option<String>,
     #[structopt(subcommand)]
@@ -111,7 +111,7 @@ fn main() -> Result<()> {
         }
     }
 
-    let cli_name = "svanill-store-cli";
+    let cli_name = "svanill-vault-cli";
     let mut conf: Config = confy::load(&cli_name)?;
     let mut conf_updated = false;
 
