@@ -120,12 +120,19 @@ fn main() -> Result<()> {
         conf_updated = true;
     }
 
+    if conf.username == "" {
+        eprintln!("Error: username is missing");
+        std::process::exit(1);
+    }
+
     let challenge = request_challenge(&conf)?;
 
     if opt.answer == None && conf.challenges.get(&challenge) == None {
-        eprintln!("Cannot authenticate. Challenge is:");
-        eprintln!("{}", challenge);
-        eprintln!("You need to provide the answer with the --answer option (will be stored in your config on success)");
+        eprintln!("Cannot authenticate, missing answer to the server's challenge.");
+        eprintln!("Decrypt the challenge to get the answer:");
+        eprintln!("  svanill -i <(echo {}) dec", challenge);
+        eprintln!("");
+        eprintln!("Then re-run svanill-vault-cli passing --username and --answer. They will be stored in a config file so you won't have to provide them again");
         std::process::exit(1);
     }
 
