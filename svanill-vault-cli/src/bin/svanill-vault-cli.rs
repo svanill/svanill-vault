@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Error, Result};
 use atty::Stream;
 use std::{
     fs::File,
@@ -47,6 +47,9 @@ enum Command {
         /// Write output to a local file named like the remote file. Existing file will be overwritten
         #[structopt(short = "O", long = "remote-name")]
         use_remote_name: bool,
+        /// Download the remote file that has this name
+        #[structopt(name = "remote_name")]
+        remote_name: String,
     },
     #[structopt(name = "push")]
     PUSH {
@@ -159,29 +162,33 @@ fn main() -> Result<()> {
         Command::PULL {
             output_file,
             use_remote_name,
+            remote_name,
         } => {
             let files = ls(&conf)?;
-            if !files.is_empty() {
-                let f = &files[0];
-                let mut f_content: &[u8] = &retrieve(&f.url)?;
 
-                let opt_path: Option<PathBuf> = match use_remote_name {
-                    // attempt to convert the remote name to a filename
-                    true => Path::new(&f.filename).file_name().map(PathBuf::from),
-                    false => output_file,
-                };
+            let f = &files
+                .iter()
+                .find(|x| x.filename == remote_name)
+                .ok_or_else(|| Error::msg(String::from("remote file not found")))?;
 
-                let stdout = io::stdout();
-                let mut handle: Box<dyn Write> = match opt_path {
-                    Some(path) => Box::new(
-                        File::create(&path)
-                            .with_context(|| format!("trying to write onto file {:?}", path))?,
-                    ),
-                    None => Box::new(stdout.lock()),
-                };
+            let mut f_content: &[u8] = &retrieve(&f.url)?;
 
-                std::io::copy(&mut f_content, &mut handle)?;
-            }
+            let opt_path: Option<PathBuf> = match use_remote_name {
+                // attempt to convert the remote name to a filename
+                true => Path::new(&f.filename).file_name().map(PathBuf::from),
+                false => output_file,
+            };
+
+            let stdout = io::stdout();
+            let mut handle: Box<dyn Write> = match opt_path {
+                Some(path) => Box::new(
+                    File::create(&path)
+                        .with_context(|| format!("trying to write onto file {:?}", path))?,
+                ),
+                None => Box::new(stdout.lock()),
+            };
+
+            std::io::copy(&mut f_content, &mut handle)?;
         }
         Command::PUSH {
             ref input_file,
