@@ -69,14 +69,26 @@ enum Command {
 }
 
 fn output_files_list(opt: &Opt, v: Vec<RetrieveListOfUserFilesResponseContentItemContent>) {
+    print!("       Bytes");
+    if opt.verbose {
+        print!(" |                         Checksum");
+    }
+    print!(" | Filename");
+    if opt.verbose {
+        print!(" | Url");
+    }
+    println!();
+
     for f in v.iter() {
-        println!("checksum: {}", f.checksum);
-        println!("filename: {}", f.filename);
-        println!("size: {}", f.size);
+        print!("{:>12}", f.size);
         if opt.verbose {
-            println!("url: {}", f.url);
+            print!(" | {}", f.checksum);
         }
-        println!("---");
+        print!(" | {}", f.filename);
+        if opt.verbose {
+            print!(" | {}", f.url);
+        }
+        println!();
     }
 }
 
