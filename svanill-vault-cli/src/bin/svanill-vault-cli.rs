@@ -41,15 +41,15 @@ enum Command {
     LIST {},
     #[structopt(name = "pull")]
     PULL {
-        /// Write output to <file> instead of stdout
-        #[structopt(short = "o", long = "output", name = "file", parse(from_os_str))]
-        output_file: Option<PathBuf>,
-        /// Write output to a local file named like the remote file. Existing file will be overwritten
-        #[structopt(short = "O", long = "remote-name")]
-        use_remote_name: bool,
-        /// Download the remote file that has this name
+        /// Download the remote file that has this name, by default to a local file with the same name
         #[structopt(name = "remote_name")]
         remote_name: String,
+        /// Write output to <file>
+        #[structopt(short = "o", long = "output", name = "file", parse(from_os_str))]
+        output_file: Option<PathBuf>,
+        /// Write output to stdout (overrides -o if set)
+        #[structopt(short = "s", long = "stdout")]
+        write_to_stdout: bool,
     },
     #[structopt(name = "push")]
     PUSH {
@@ -173,7 +173,7 @@ fn main() -> Result<()> {
         }
         Command::PULL {
             output_file,
-            use_remote_name,
+            write_to_stdout,
             remote_name,
         } => {
             let files = ls(&conf)?;
@@ -185,19 +185,29 @@ fn main() -> Result<()> {
 
             let mut f_content: &[u8] = &retrieve(&f.url)?;
 
-            let opt_path: Option<PathBuf> = match use_remote_name {
-                // attempt to convert the remote name to a filename
-                true => Path::new(&f.filename).file_name().map(PathBuf::from),
-                false => output_file,
-            };
-
             let stdout = io::stdout();
-            let mut handle: Box<dyn Write> = match opt_path {
-                Some(path) => Box::new(
+            let mut handle: Box<dyn Write> = if write_to_stdout {
+                Box::new(stdout.lock())
+            } else {
+                let path = if let Some(path) = output_file {
+                    path
+                } else {
+                    // attempt to convert the remote name to a filename
+                    Path::new(&f.filename)
+                        .file_name()
+                        .map(PathBuf::from)
+                        .ok_or_else(|| {
+                            Error::msg(format!(
+                                "cannot convert remote name to a proper path: {}",
+                                f.filename
+                            ))
+                        })?
+                };
+
+                Box::new(
                     File::create(&path)
                         .with_context(|| format!("trying to write onto file {:?}", path))?,
-                ),
-                None => Box::new(stdout.lock()),
+                )
             };
 
             std::io::copy(&mut f_content, &mut handle)?;
