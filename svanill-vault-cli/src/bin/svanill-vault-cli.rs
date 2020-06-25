@@ -53,12 +53,17 @@ enum Command {
     },
     #[structopt(name = "push")]
     PUSH {
-        /// Read input from <file> instead of stdin
-        #[structopt(short = "i", long = "input", name = "file", parse(from_os_str))]
-        input_file: Option<PathBuf>,
-        /// Use the local file name as remote name (requires -i to point to an existing file). If this flag is not provided a random name will be used instead
-        #[structopt(short = "l", long = "local-name")]
-        use_local_name: bool,
+        /// Push file to a svanill-vault server.
+        /// With no FILE, or when FILE is -, read standard input.
+        /// When reading from standard input, -g is implied
+        #[structopt(name = "FILE", parse(from_os_str))]
+        maybe_input_file: Option<PathBuf>,
+        /// Push the content under a random file name
+        #[structopt(short = "g", long = "random-remote-name")]
+        gen_random_remote_name: bool,
+        /// Set a different remote file name. Override -g if both present
+        #[structopt(short = "r", long = "remote-name")]
+        maybe_remote_name: Option<String>,
     },
     #[structopt(name = "rm")]
     DELETE {
@@ -93,27 +98,28 @@ fn output_files_list(opt: &Opt, v: Vec<RetrieveListOfUserFilesResponseContentIte
 }
 
 fn main() -> Result<()> {
-    let opt = Opt::from_args();
+    let mut opt = Opt::from_args();
 
     // Check some options validity before attempting network requests
     if let Command::PUSH {
-        use_local_name,
-        ref input_file,
+        ref mut gen_random_remote_name,
+        ref mut maybe_input_file,
+        ref maybe_remote_name,
     } = opt.cmd
     {
-        let mut input_file = input_file.clone();
-        if Some(PathBuf::from("-")) == input_file {
-            input_file = None;
+        if Some(PathBuf::from("-")) == *maybe_input_file {
+            *maybe_input_file = None;
         }
 
-        if use_local_name && input_file == None {
-            eprintln!(
-                    "ERROR: you cannot pipe data in and request to use the local filename at the same time"
-                );
-            std::process::exit(1);
+        if maybe_remote_name.is_some() && *gen_random_remote_name {
+            *gen_random_remote_name = false;
         }
 
-        match input_file {
+        if maybe_input_file.is_none() && maybe_remote_name.is_none() {
+            *gen_random_remote_name = true;
+        }
+
+        match maybe_input_file {
             None if atty::is(Stream::Stdin) => {
                 eprintln!("ERROR: no data piped in");
                 std::process::exit(1);
@@ -213,17 +219,13 @@ fn main() -> Result<()> {
             std::io::copy(&mut f_content, &mut handle)?;
         }
         Command::PUSH {
-            ref input_file,
-            use_local_name,
+            gen_random_remote_name,
+            maybe_input_file,
+            maybe_remote_name,
         } => {
-            let mut input_file = input_file.clone();
-            if Some(PathBuf::from("-")) == input_file {
-                input_file = None;
-            }
-
             let mut local_content = Vec::new();
 
-            match input_file {
+            match maybe_input_file {
                 Some(ref path) if path.exists() => {
                     File::open(&path)
                         .with_context(|| format!("trying to read file {:?}", path))?
@@ -237,15 +239,17 @@ fn main() -> Result<()> {
                 _ => panic!("Input file does not exist"),
             }
 
-            let remote_name = if use_local_name {
-                Path::new(&input_file.unwrap())
+            let remote_name = if gen_random_remote_name {
+                gen_random_filename()
+            } else if maybe_remote_name.is_some() {
+                maybe_remote_name.unwrap()
+            } else {
+                Path::new(&maybe_input_file.unwrap())
                     .file_name()
                     .map(PathBuf::from)
                     .unwrap()
                     .to_string_lossy()
                     .into()
-            } else {
-                gen_random_filename()
             };
 
             let links = request_upload_url(&conf, &remote_name)?;
