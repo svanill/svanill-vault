@@ -73,32 +73,31 @@ pub fn upload(
     form = form.part("file", content_part);
 
     let res = client.post(&url).multipart(form).send()?;
-
-    let etag = if res.headers().get("etag").is_none() {
-        ""
-    } else {
-        res.headers()
-            .get("etag")
-            .unwrap()
-            .to_str()
-            .unwrap_or("")
-            .trim_matches('"')
-    };
-
-    if etag != checksum {
-        return Err(SdkError::ChecksumMismatch {
-            local: checksum,
-            remote: etag.to_owned(),
-        });
-    }
-
     let status = res.status();
-    let content = res.text()?;
 
     if status.is_success() {
-        return Ok(());
+        let etag = if res.headers().get("etag").is_none() {
+            ""
+        } else {
+            res.headers()
+                .get("etag")
+                .unwrap()
+                .to_str()
+                .unwrap_or("")
+                .trim_matches('"')
+        };
+
+        if etag == checksum {
+            return Ok(());
+        } else {
+            return Err(SdkError::ChecksumMismatch {
+                local: checksum,
+                remote: etag.to_owned(),
+            });
+        }
     };
 
+    let content = res.text()?;
     vault_error!(status, content)
 }
 
