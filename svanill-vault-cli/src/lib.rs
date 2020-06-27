@@ -9,3 +9,5 @@ pub mod utils;
 
 #[macro_use]
 pub mod sdk;
+
+pub mod commands;

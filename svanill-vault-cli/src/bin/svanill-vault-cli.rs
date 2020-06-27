@@ -9,6 +9,7 @@ use structopt::StructOpt;
 use svanill_vault_cli::config::Config;
 use svanill_vault_cli::utils::gen_random_filename;
 use svanill_vault_cli::{
+    commands::pull::sanitize_possible_filename,
     models::RetrieveListOfUserFilesResponseContentItemContent,
     sdk::{answer_challenge, delete, ls, request_challenge, request_upload_url, retrieve, upload},
 };
@@ -198,16 +199,7 @@ fn main() -> Result<()> {
                 let path = if let Some(path) = output_file {
                     path
                 } else {
-                    // attempt to convert the remote name to a filename
-                    Path::new(&f.filename)
-                        .file_name()
-                        .map(PathBuf::from)
-                        .ok_or_else(|| {
-                            Error::msg(format!(
-                                "cannot convert remote name to a proper path: {}",
-                                f.filename
-                            ))
-                        })?
+                    sanitize_possible_filename(&f.filename)?
                 };
 
                 Box::new(
