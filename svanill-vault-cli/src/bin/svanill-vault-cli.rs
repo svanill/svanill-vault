@@ -16,7 +16,7 @@ use svanill_vault_cli::{
 
 #[derive(Debug, StructOpt)]
 #[structopt(
-    name = "svanill-vault",
+    name = "svanill-vault-cli",
     about = "Read/Write data from/to a svanill vault server"
 )]
 struct Opt {
