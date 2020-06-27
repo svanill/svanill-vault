@@ -202,7 +202,7 @@ fn main() -> Result<()> {
 
                 Box::new(
                     File::create(&path)
-                        .with_context(|| format!("trying to write onto file {:?}", path))?,
+                        .with_context(|| format!("cannot create file {:?}", path))?,
                 )
             };
 
