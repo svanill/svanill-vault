@@ -190,8 +190,6 @@ fn main() -> Result<()> {
                 .find(|x| x.filename == remote_name)
                 .ok_or_else(|| Error::msg(String::from("remote file not found")))?;
 
-            let mut f_content: &[u8] = &retrieve(&f.url)?;
-
             let stdout = io::stdout();
             let mut handle: Box<dyn Write> = if write_to_stdout {
                 Box::new(stdout.lock())
@@ -208,7 +206,8 @@ fn main() -> Result<()> {
                 )
             };
 
-            std::io::copy(&mut f_content, &mut handle)?;
+            let mut reader = retrieve(&f.url)?;
+            std::io::copy(&mut reader, &mut handle)?;
         }
         Command::PUSH {
             gen_random_remote_name,

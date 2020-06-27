@@ -5,15 +5,11 @@ use crate::models::{
 };
 use crate::sdk::response_error::SdkError;
 use md5::{Digest, Md5};
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Read};
 
-pub fn retrieve(url: &str) -> Result<Vec<u8>, SdkError> {
+pub fn retrieve(url: &str) -> Result<impl Read, SdkError> {
     let client = reqwest::blocking::Client::new();
-    let res = client.get(url).send()?;
-    match res.bytes() {
-        Err(x) => Err(x.into()),
-        Ok(x) => Ok(x.to_vec()),
-    }
+    client.get(url).send().map_err(|e| e.into())
 }
 
 pub fn request_upload_url(
