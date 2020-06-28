@@ -23,6 +23,9 @@ struct Opt {
     /// switch on verbosity
     #[structopt(short)]
     verbose: bool,
+    /// switch on verbosity
+    #[structopt(short)]
+    store_conf: bool,
     /// Svanill vault host
     #[structopt(short = "h", default_value = "https://api.svanill.com")]
     host: String,
@@ -166,7 +169,7 @@ fn main() -> Result<()> {
     let answer = conf.challenges.get(&challenge).unwrap();
     conf.token = answer_challenge(&conf, answer)?;
 
-    if conf_updated {
+    if conf_updated && opt.store_conf {
         confy::store(&cli_name, &conf)?;
     }
 
