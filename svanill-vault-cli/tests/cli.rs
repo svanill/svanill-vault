@@ -109,6 +109,41 @@ fn it_list_remote_files() {
     );
 }
 
+#[test]
+fn it_delete_files() {
+    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
+
+    let base_url = &mockito::server_url();
+
+    let (m1, m2) = mock_successful_authentication_requests(&base_url);
+
+    let m3 = mock("DELETE", "/files/?filename=some-file-to-delete")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"status":200}"#)
+        .create();
+
+    let assert = cmd
+        .args(&[
+            "-h",
+            base_url,
+            "-u",
+            "test_user",
+            "--answer",
+            "test answer",
+            "rm",
+            "some-file-to-delete",
+        ])
+        .assert();
+
+    m1.assert();
+    m2.assert();
+    m3.assert();
+    assert
+        .success()
+        .stdout("Success: deleted file \"some-file-to-delete\"\n");
+}
+
 fn mock_successful_authentication_requests(base_url: &str) -> (mockito::Mock, mockito::Mock) {
     let m1 = mock("GET", "/auth/request-challenge?username=test_user")
         .with_status(200)
