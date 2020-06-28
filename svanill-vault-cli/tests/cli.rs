@@ -53,51 +53,7 @@ fn it_list_remote_files() {
 
     let base_url = &mockito::server_url();
 
-    let m1 = mock("GET", "/auth/request-challenge?username=test_user")
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(
-            json!({
-                "content": {"challenge":"somechallenge"},
-                "links":
-                    {
-                        "answer_auth_challenge":{
-                            "href": format!("{}/auth/answer-challenge", base_url),
-                            "rel":"auth"
-                        },
-                        "create_user":{
-                            "href": format!("{}/users/", base_url),
-                            "rel":"user"
-                        }
-                    },
-                "status":200
-            })
-            .to_string(),
-        )
-        .create();
-
-    let m2 = mock("POST", "/auth/answer-challenge")
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(
-            json!({
-                    "content":{"token":"a-secure-token"},
-                    "links":{
-                        "files_list":{
-                            "href":format!("{}/files/", base_url),
-                            "rel":"file"
-                        },
-                        "request_upload_url":{
-                            "href":format!("{}/files/request-upload-url/", base_url),
-                            "rel":"file"
-                        }
-                    },
-                    "status":200
-                }
-            )
-            .to_string(),
-        )
-        .create();
+    let (m1, m2) = mock_successful_authentication_requests(&base_url);
 
     let m3 = mock("GET", "/files/")
         .with_status(200)
@@ -151,4 +107,54 @@ fn it_list_remote_files() {
          123 | this-is-a-test-file
 "#,
     );
+}
+
+fn mock_successful_authentication_requests(base_url: &str) -> (mockito::Mock, mockito::Mock) {
+    let m1 = mock("GET", "/auth/request-challenge?username=test_user")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(
+            json!({
+                "content": {"challenge":"somechallenge"},
+                "links":
+                    {
+                        "answer_auth_challenge":{
+                            "href": format!("{}/auth/answer-challenge", base_url),
+                            "rel":"auth"
+                        },
+                        "create_user":{
+                            "href": format!("{}/users/", base_url),
+                            "rel":"user"
+                        }
+                    },
+                "status":200
+            })
+            .to_string(),
+        )
+        .create();
+
+    let m2 = mock("POST", "/auth/answer-challenge")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(
+            json!({
+                    "content":{"token":"a-secure-token"},
+                    "links":{
+                        "files_list":{
+                            "href":format!("{}/files/", base_url),
+                            "rel":"file"
+                        },
+                        "request_upload_url":{
+                            "href":format!("{}/files/request-upload-url/", base_url),
+                            "rel":"file"
+                        }
+                    },
+                    "status":200
+                }
+            )
+            .to_string(),
+        )
+        .create();
+
+    (m1, m2)
 }
