@@ -55,37 +55,7 @@ fn it_list_remote_files() {
 
     let (m1, m2) = mock_successful_authentication_requests(&base_url);
 
-    let m3 = mock("GET", "/files/")
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(
-            json!({
-                "content":[
-                    {
-                        "content":{
-                            "checksum":"a9a1bdddeacc612db8b5c01a830af1c3",
-                            "filename":"this-is-a-test-file",
-                            "size":123,
-                            "url":"some_url_1"
-                        },
-                        "links":{
-                            "delete":{
-                                "href":format!("{}/files/", base_url),
-                                "rel":"file"
-                            },
-                            "read":{
-                                "href":"some_url_1",
-                                "rel":"file"
-                            }
-                        }
-                    }
-                ],
-                "status":200
-            }
-            )
-            .to_string(),
-        )
-        .create();
+    let m3 = mock_list_files_happy_path(&base_url);
 
     let assert = cmd
         .args(&[
@@ -192,4 +162,38 @@ fn mock_successful_authentication_requests(base_url: &str) -> (mockito::Mock, mo
         .create();
 
     (m1, m2)
+}
+
+fn mock_list_files_happy_path(base_url: &str) -> mockito::Mock {
+    mock("GET", "/files/")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(
+            json!({
+                "content":[
+                    {
+                        "content":{
+                            "checksum":"a9a1bdddeacc612db8b5c01a830af1c3",
+                            "filename":"this-is-a-test-file",
+                            "size":123,
+                            "url":format!("{}/imaginary/url/this-is-a-test-file", base_url),
+                        },
+                        "links":{
+                            "delete":{
+                                "href":format!("{}/files/", base_url),
+                                "rel":"file"
+                            },
+                            "read":{
+                                "href":format!("{}/imaginary/url/this-is-a-test-file", base_url),
+                                "rel":"file"
+                            }
+                        }
+                    }
+                ],
+                "status":200
+            }
+            )
+            .to_string(),
+        )
+        .create()
 }
