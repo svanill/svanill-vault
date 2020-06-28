@@ -1,4 +1,5 @@
 use assert_cmd::Command;
+use mockito::mock;
 
 #[test]
 fn it_output_version() {
@@ -7,4 +8,40 @@ fn it_output_version() {
     let assert = cmd.args(&["-V"]).assert();
 
     assert.success().stdout("svanill-vault-cli 0.1.0\n");
+}
+
+#[test]
+fn it_exit_with_error_if_the_user_does_not_exist() {
+    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
+
+    let m = mock("GET", "/auth/request-challenge?username=test_user")
+        .with_status(401)
+        .with_header("content-type", "application/json")
+        .with_body(
+            r#"
+        {
+            "error": {"code":1005,"message":"The user does not exist"},
+            "links":{
+                "create_user":{
+                    "href":"https://api.svanill.com/users/",
+                    "rel":"user"
+                }
+            },
+            "status":401
+        }
+            "#,
+        )
+        .create();
+
+    let base_url = &mockito::server_url();
+    let assert = cmd
+        .args(&["-u", "test_user", "-h", base_url, "ls"])
+        .assert();
+
+    m.assert();
+    assert
+        .failure()
+        .code(1)
+        .stdout("")
+        .stderr("Error: Status: 401, Code: 1005, Message: \"The user does not exist\"\n");
 }
