@@ -140,7 +140,7 @@ fn main() -> Result<()> {
     let mut conf: Config = confy::load(&cli_name)?;
     let mut conf_updated = false;
 
-    if conf.username == "" && opt.username != None {
+    if opt.username != None {
         conf.username = opt.username.clone().unwrap();
         conf_updated = true;
     }
