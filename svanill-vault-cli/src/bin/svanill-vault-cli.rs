@@ -150,6 +150,11 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
 
+    if opt.host != conf.base_url {
+        conf.base_url = opt.host.clone();
+        conf_updated = true;
+    }
+
     let challenge = request_challenge(&conf)?;
 
     if opt.answer == None && conf.challenges.get(&challenge) == None {
