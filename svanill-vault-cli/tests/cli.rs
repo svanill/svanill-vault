@@ -1,5 +1,5 @@
 use assert_cmd::Command;
-use mockito::mock;
+use mockito::{mock, Matcher};
 use serde_json::json;
 
 #[test]
@@ -148,6 +148,78 @@ fn it_pull_remote_file_output_to_stdout() {
     m3.assert();
     m4.assert();
     assert.success().stdout("imaginary content");
+}
+
+#[test]
+fn it_push_content_from_stdin_to_remote_file() {
+    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
+
+    let base_url = &mockito::server_url();
+
+    let (m1, m2) = mock_successful_authentication_requests(&base_url);
+
+    let m3 = mock("POST", "/files/request-upload-url")
+        .match_body(r#"{"filename":"some-remote-filename"}"#)
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(json!({
+            "links":{
+                "retrieve_url":{
+                    "href":format!("{}/some/imaginary/retrieve/url", base_url),
+                    "rel":"file"
+                },
+                "upload_url":{
+                    "form_data":{
+                        "bucket":"some-bucket",
+                        "key":"users/test_user/some-remote-filename",
+                        "policy":"xxx",
+                        "x-amz-algorithm":"AWS4-HMAC-SHA256",
+                        "x-amz-credential":"AMIAIT3W6RZTLLGAZEXQ/10230679/us-west-2/s3/aws4_request",
+                        "x-amz-date":"20200629T014946Z",
+                        "x-amz-signature":"50cf7a0fa5ec900de9a6d7b05f7ecdd8e3c082bb144b7604d71118852e386c2d"
+                    },
+                    "href":format!("{}/some/imaginary/upload/url", base_url),
+                    "rel":"file"
+                }
+            },
+            "status":200
+        })
+        .to_string())
+        .create();
+
+    let m4 = mock("POST", "/some/imaginary/upload/url")
+        .match_header(
+            "Content-Type",
+            Matcher::Regex("^multipart/form-data(;.*)?".to_string()),
+        )
+        .match_body(Matcher::Regex("Content-Disposition".to_string()))
+        .with_status(204)
+        .with_header("ETag", "2e01e17dd92be3c7fab5e08505ed64c9")
+        .create();
+
+    let assert = cmd
+        .args(&[
+            "-h",
+            base_url,
+            "-u",
+            "test_user",
+            "--answer",
+            "test answer",
+            "push",
+            "-r",
+            "some-remote-filename",
+            "-",
+        ])
+        .write_stdin("blob of data")
+        .assert();
+
+    m1.assert();
+    m2.assert();
+    m3.assert();
+    m4.assert();
+    assert
+        .success()
+        .stdout("Successfully pushed file, using as remote name \"some-remote-filename\"\n");
 }
 
 fn mock_successful_authentication_requests(base_url: &str) -> (mockito::Mock, mockito::Mock) {
