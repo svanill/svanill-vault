@@ -20,6 +20,20 @@ impl fmt::Display for SanitizeError {
 impl Error for SanitizeError {}
 
 /// Given a string, try to create a PathBuf with what could be seen as a filename
+///
+/// ```
+/// # use std::path::PathBuf;
+/// # use svanill_vault_cli::commands::pull::sanitize_possible_filename;
+/// # use svanill_vault_cli::commands::pull::SanitizeError;
+/// let possible_filename = "/foo/bar/baz";
+///
+/// assert_eq!(
+///     PathBuf::from("baz"),
+///     sanitize_possible_filename(possible_filename)?
+/// );
+/// # Ok::<(), SanitizeError>(())
+/// ```
+///
 pub fn sanitize_possible_filename(filename: &str) -> Result<PathBuf, SanitizeError> {
     // attempt to convert the remote name to a filename
     Path::new(filename)
