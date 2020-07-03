@@ -8,3 +8,6 @@ license = "AGPL-3.0-or-later"
 readme = "README.md"
 
 [dependencies]
+actix-web = "2.0.0"
+actix-rt = "1.1.1"
+env_logger = "0.7.1"
