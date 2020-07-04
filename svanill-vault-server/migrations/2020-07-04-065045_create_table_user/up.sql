@@ -1,0 +1,5 @@
+CREATE TABLE user (
+  username VARCHAR(50) NOT NULL PRIMARY KEY,
+  challenge VARCHAR(255) NOT NULL,
+  answer VARCHAR(32) NOT NULL
+)
