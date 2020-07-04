@@ -10,10 +10,10 @@ use structopt::StructOpt;
 )]
 struct Opt {
     /// Server host
-    #[structopt(short = "H", default_value = "localhost")]
+    #[structopt(short = "H", default_value = "localhost", env = "SVANILL_VAULT_HOST")]
     host: String,
     /// Server port
-    #[structopt(short = "P", default_value = "8080")]
+    #[structopt(short = "P", default_value = "8080", env = "SVANILL_VAULT_PORT")]
     port: u16,
 }
 
