@@ -1,5 +1,7 @@
 use actix_web::middleware::Logger;
 use actix_web::{get, App, HttpServer, Responder};
+use diesel::prelude::SqliteConnection;
+use diesel::r2d2::{self, ConnectionManager};
 use std::env;
 use structopt::StructOpt;
 
@@ -15,6 +17,9 @@ struct Opt {
     /// Server port
     #[structopt(short = "P", default_value = "8080", env = "SVANILL_VAULT_PORT")]
     port: u16,
+    /// Database url
+    #[structopt(short = "d", default_value = "vault.db", env = "SVANILL_VAULT_DB")]
+    db_url: String,
 }
 
 #[get("/")]
@@ -29,8 +34,20 @@ async fn main() -> std::io::Result<()> {
 
     let opt = Opt::from_args();
 
-    HttpServer::new(|| App::new().wrap(Logger::default()).service(index))
-        .bind((opt.host, opt.port))?
-        .run()
-        .await
+    // set up database connection pool
+    let connspec = opt.db_url;
+    let manager = ConnectionManager::<SqliteConnection>::new(connspec);
+    let pool = r2d2::Pool::builder()
+        .build(manager)
+        .expect("Failed to create database connection pool");
+
+    HttpServer::new(move || {
+        App::new()
+            .data(pool.clone())
+            .wrap(Logger::default())
+            .service(index)
+    })
+    .bind((opt.host, opt.port))?
+    .run()
+    .await
 }
