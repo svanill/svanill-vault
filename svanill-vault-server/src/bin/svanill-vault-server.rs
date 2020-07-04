@@ -35,7 +35,7 @@ async fn auth_user_request_challenge(pool: web::Data<DbPool>) -> Result<HttpResp
     use svanill_vault_server::db::schema::user::dsl::*;
     let conn = pool.get().expect("couldn't get db connection from pool");
 
-    let maybe_users = user.load::<db::models::User>(&conn);
+    let maybe_users = web::block(move || user.load::<db::models::User>(&conn)).await;
 
     if let Ok(users) = maybe_users {
         Ok(HttpResponse::Ok().json(users))
