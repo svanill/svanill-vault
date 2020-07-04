@@ -1,9 +1,12 @@
 use actix_web::middleware::Logger;
-use actix_web::{get, App, HttpServer, Responder};
-use diesel::prelude::SqliteConnection;
+use actix_web::{get, web, App, Error, HttpResponse, HttpServer, Responder};
+use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use std::env;
 use structopt::StructOpt;
+use svanill_vault_server::db;
+
+type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -27,6 +30,22 @@ async fn index() -> impl Responder {
     format!("todo")
 }
 
+#[get("/auth/request-challenge")]
+async fn auth_user_request_challenge(pool: web::Data<DbPool>) -> Result<HttpResponse, Error> {
+    use svanill_vault_server::db::schema::user::dsl::*;
+    let conn = pool.get().expect("couldn't get db connection from pool");
+
+    let maybe_users = user.load::<db::models::User>(&conn);
+
+    if let Ok(users) = maybe_users {
+        Ok(HttpResponse::Ok()
+            .content_type("text/plain")
+            .body(format!("Got {} users!", users.len())))
+    } else {
+        Ok(HttpResponse::InternalServerError().finish())
+    }
+}
+
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
     env::set_var("RUST_LOG", "actix_web=debug,actix_server=info");
@@ -46,6 +65,7 @@ async fn main() -> std::io::Result<()> {
             .data(pool.clone())
             .wrap(Logger::default())
             .service(index)
+            .service(auth_user_request_challenge)
     })
     .bind((opt.host, opt.port))?
     .run()
