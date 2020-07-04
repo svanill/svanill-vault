@@ -1,3 +1,4 @@
+use actix_web::middleware::Logger;
 use actix_web::{get, App, HttpServer, Responder};
 use std::env;
 use structopt::StructOpt;
@@ -28,7 +29,7 @@ async fn main() -> std::io::Result<()> {
 
     let opt = Opt::from_args();
 
-    HttpServer::new(|| App::new().service(index))
+    HttpServer::new(|| App::new().wrap(Logger::default()).service(index))
         .bind((opt.host, opt.port))?
         .run()
         .await
