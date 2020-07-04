@@ -38,9 +38,7 @@ async fn auth_user_request_challenge(pool: web::Data<DbPool>) -> Result<HttpResp
     let maybe_users = user.load::<db::models::User>(&conn);
 
     if let Ok(users) = maybe_users {
-        Ok(HttpResponse::Ok()
-            .content_type("text/plain")
-            .body(format!("Got {} users!", users.len())))
+        Ok(HttpResponse::Ok().json(users))
     } else {
         Ok(HttpResponse::InternalServerError().finish())
     }
