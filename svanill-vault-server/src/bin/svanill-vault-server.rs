@@ -47,15 +47,16 @@ async fn auth_user_request_challenge(
 ) -> Result<HttpResponse, Error> {
     let conn = pool.get().expect("couldn't get db connection from pool");
 
-    let username = q
-        .username
-        .clone()
-        .ok_or_else(|| VaultError::FieldRequired {
-            field: "username".to_owned(),
-        })?;
+    if q.username.is_none() {
+        return Err(VaultError::FieldRequired {
+            field: "username".into(),
+        }
+        .into());
+    };
 
     let maybe_user =
-        web::block(move || db::actions::find_user_by_username(&conn, &username)).await?;
+        web::block(move || db::actions::find_user_by_username(&conn, q.username.as_ref().unwrap()))
+            .await?;
 
     if let Some(user) = maybe_user {
         Ok(HttpResponse::Ok().json(
