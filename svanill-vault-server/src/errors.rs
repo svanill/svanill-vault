@@ -2,6 +2,7 @@ use actix_http::ResponseBuilder;
 use actix_web::{error, http::header, http::StatusCode, HttpResponse};
 use serde::ser::Serializer;
 use std::fmt::{self, Display};
+use thiserror::Error;
 
 fn statuscode_to_u16<S>(x: &StatusCode, s: S) -> Result<S::Ok, S::Error>
 where
@@ -50,10 +51,13 @@ impl error::ResponseError for ApiError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum VaultError {
     NotFound,
     MethodNotAllowed,
+    FieldRequired { field: String },
+    UserDoesNotExist,
+    DatabaseError(#[from] diesel::result::Error),
 }
 
 impl From<&VaultError> for ApiError {
@@ -68,6 +72,21 @@ impl From<&VaultError> for ApiError {
                 StatusCode::METHOD_NOT_ALLOWED,
                 StatusCode::METHOD_NOT_ALLOWED.as_u16().into(),
                 String::from("Method Not Allowed"),
+            ),
+            VaultError::FieldRequired { field } => ApiError::new(
+                StatusCode::CONFLICT,
+                1002,
+                format!("This field is required: {}", field),
+            ),
+            VaultError::UserDoesNotExist => ApiError::new(
+                StatusCode::UNAUTHORIZED,
+                1005,
+                String::from("The user does not exist"),
+            ),
+            VaultError::DatabaseError(_) => ApiError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                1021,
+                String::from("Internal Server Error"),
             ),
         }
     }

@@ -2,6 +2,7 @@ use actix_web::middleware::Logger;
 use actix_web::{get, guard, web, App, Error, HttpResponse, HttpServer, Responder};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
+use serde::Deserialize;
 use std::env;
 use structopt::StructOpt;
 use svanill_vault_server::{db, errors::VaultError};
@@ -30,17 +31,33 @@ async fn index() -> impl Responder {
     format!("todo")
 }
 
+#[derive(Deserialize)]
+struct AuthRequestChallengeQueryFields {
+    // XXX this is optional, but it shouldn't be. Maybe make it part of the URI?
+    username: Option<String>,
+}
+
 #[get("/auth/request-challenge")]
-async fn auth_user_request_challenge(pool: web::Data<DbPool>) -> Result<HttpResponse, Error> {
-    use svanill_vault_server::db::schema::user::dsl::*;
+async fn auth_user_request_challenge(
+    pool: web::Data<DbPool>,
+    q: web::Query<AuthRequestChallengeQueryFields>,
+) -> Result<HttpResponse, Error> {
     let conn = pool.get().expect("couldn't get db connection from pool");
 
-    let maybe_users = web::block(move || user.load::<db::models::User>(&conn)).await;
+    let username = q
+        .username
+        .clone()
+        .ok_or_else(|| VaultError::FieldRequired {
+            field: "username".to_owned(),
+        })?;
 
-    if let Ok(users) = maybe_users {
-        Ok(HttpResponse::Ok().json(users))
+    let maybe_user =
+        web::block(move || db::actions::find_user_by_username(&conn, &username)).await?;
+
+    if let Some(user) = maybe_user {
+        Ok(HttpResponse::Ok().json(user.challenge))
     } else {
-        Ok(HttpResponse::InternalServerError().finish())
+        Err(VaultError::UserDoesNotExist.into())
     }
 }
 
