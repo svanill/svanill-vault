@@ -1542,6 +1542,7 @@ dependencies = [
 name = "svanill-vault-server"
 version = "0.1.0"
 dependencies = [
+ "actix-http",
  "actix-rt",
  "actix-web",
  "diesel",

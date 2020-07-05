@@ -1,10 +1,10 @@
 use actix_web::middleware::Logger;
-use actix_web::{get, web, App, Error, HttpResponse, HttpServer, Responder};
+use actix_web::{get, guard, web, App, Error, HttpResponse, HttpServer, Responder};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use std::env;
 use structopt::StructOpt;
-use svanill_vault_server::db;
+use svanill_vault_server::{db, errors::VaultError};
 
 type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
 
@@ -44,6 +44,16 @@ async fn auth_user_request_challenge(pool: web::Data<DbPool>) -> Result<HttpResp
     }
 }
 
+/// 404 handler
+async fn p404() -> Result<&'static str, Error> {
+    Err(VaultError::NotFound.into())
+}
+
+// Not allowed handler
+async fn method_not_allowed() -> Result<&'static str, Error> {
+    Err(VaultError::MethodNotAllowed.into())
+}
+
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
     env::set_var("RUST_LOG", "actix_web=debug,actix_server=info");
@@ -64,6 +74,17 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .service(index)
             .service(auth_user_request_challenge)
+            .default_service(
+                // 404 for GET request
+                web::resource("")
+                    .route(web::get().to(p404))
+                    // all requests that are not `GET`
+                    .route(
+                        web::route()
+                            .guard(guard::Not(guard::Get()))
+                            .to(method_not_allowed),
+                    ),
+            )
     })
     .bind((opt.host, opt.port))?
     .run()
