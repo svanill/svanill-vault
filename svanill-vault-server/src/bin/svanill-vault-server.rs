@@ -6,7 +6,7 @@ use serde::Deserialize;
 use serde_json::json;
 use std::env;
 use structopt::StructOpt;
-use svanill_vault_server::models::AskForTheChallengeResponse;
+use svanill_vault_server::models::{AnswerUserChallengeRequest, AskForTheChallengeResponse};
 use svanill_vault_server::{db, errors::VaultError};
 
 type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
@@ -77,9 +77,27 @@ async fn auth_user_request_challenge(
     }
 }
 
-#[get("/auth/answer-challenge")]
-async fn auth_user_answer_challenge() -> Result<HttpResponse, Error> {
-    unimplemented!()
+async fn auth_user_answer_challenge(
+    payload: web::Json<AnswerUserChallengeRequest>,
+    pool: web::Data<DbPool>,
+) -> Result<HttpResponse, Error> {
+    let conn = pool.get().expect("couldn't get db connection from pool");
+    let answer = payload.answer.clone();
+
+    let maybe_user =
+        web::block(move || db::actions::find_user_by_username(&conn, &payload.username)).await?;
+
+    if let Some(user) = maybe_user {
+        let correct_answer = user.answer;
+
+        if answer != correct_answer {
+            return Err(VaultError::ChallengeMismatchError.into());
+        }
+    }
+
+    // generate a new signed token
+    // keep the token somewhere
+    unimplemented!();
 }
 
 #[get("/users/")]
@@ -133,7 +151,12 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .service(index)
             .service(auth_user_request_challenge)
-            .service(auth_user_answer_challenge)
+            .service(
+                web::resource("/auth/answer-challenge")
+                    .route(web::get().to(auth_user_answer_challenge))
+                    .name("auth_user_answer_challenge")
+                    .data(web::JsonConfig::default().limit(512)),
+            )
             .service(new_user)
             .default_service(
                 // 404 for GET request

@@ -58,6 +58,7 @@ pub enum VaultError {
     FieldRequired { field: String },
     UserDoesNotExist,
     DatabaseError(#[from] diesel::result::Error),
+    ChallengeMismatchError,
 }
 
 impl From<&VaultError> for ApiError {
@@ -82,6 +83,11 @@ impl From<&VaultError> for ApiError {
                 StatusCode::UNAUTHORIZED,
                 1005,
                 String::from("The user does not exist"),
+            ),
+            VaultError::ChallengeMismatchError => ApiError::new(
+                StatusCode::UNAUTHORIZED,
+                1006,
+                String::from("The challenge does not match"),
             ),
             VaultError::DatabaseError(_) => ApiError::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
