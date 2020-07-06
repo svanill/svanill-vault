@@ -6,8 +6,10 @@ use ring::{hmac, rand};
 use serde::Deserialize;
 use serde_json::json;
 use std::env;
+use std::sync::{Arc, Mutex};
 use structopt::StructOpt;
 use svanill_vault_server::auth_token::AuthToken;
+use svanill_vault_server::db::auth::TokensCache;
 use svanill_vault_server::models::{AnswerUserChallengeRequest, AskForTheChallengeResponse};
 use svanill_vault_server::{db, errors::VaultError};
 
@@ -83,6 +85,7 @@ async fn auth_user_answer_challenge(
     payload: web::Json<AnswerUserChallengeRequest>,
     pool: web::Data<DbPool>,
     crypto_key: web::Data<std::sync::Arc<ring::hmac::Key>>,
+    tokens_cache: web::Data<Arc<Mutex<TokensCache>>>,
 ) -> Result<HttpResponse, Error> {
     let conn = pool.get().expect("couldn't get db connection from pool");
     let answer = payload.answer.clone();
@@ -96,13 +99,17 @@ async fn auth_user_answer_challenge(
         if answer != correct_answer {
             return Err(VaultError::ChallengeMismatchError.into());
         }
+
+        // Generate a new signed token
+        let token = AuthToken::new(&*crypto_key);
+        let token_as_string = token.to_string();
+
+        // Store the token, alongside the user it represent
+        tokens_cache.lock().unwrap().insert(token, user.username);
+
+        return Ok(token_as_string.into());
     }
 
-    // generate a new signed token
-    let token = AuthToken::new(&*crypto_key);
-    return Ok(token.to_string().into());
-
-    // keep the token somewhere
     unimplemented!();
 }
 
@@ -157,10 +164,17 @@ async fn main() -> std::io::Result<()> {
         hmac::Key::generate(hmac::HMAC_SHA256, &rng).expect("Cannot generate cryptographyc key"),
     );
 
+    // Use a LRU cache to store tokens, until we add redis support
+    let tokens_cache: Arc<Mutex<TokensCache>> = Arc::new(Mutex::new(TokensCache::new(
+        1000,
+        std::time::Duration::from_secs(60 * 60 * 2),
+    )));
+
     HttpServer::new(move || {
         App::new()
             .data(pool.clone())
             .data(key.clone())
+            .data(tokens_cache.clone())
             .wrap(Logger::default())
             .service(index)
             .service(auth_user_request_challenge)

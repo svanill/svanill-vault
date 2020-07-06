@@ -1590,6 +1590,7 @@ dependencies = [
  "diesel",
  "env_logger",
  "hex",
+ "lru-cache",
  "ring",
  "serde",
  "serde_derive",

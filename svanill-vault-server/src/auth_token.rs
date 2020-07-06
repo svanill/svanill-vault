@@ -1,5 +1,9 @@
 use ring::{hmac, rand::SecureRandom};
+use std::cmp::{Eq, PartialEq};
 use std::fmt;
+use std::hash::Hash;
+
+#[derive(Eq, PartialEq, Hash)]
 pub struct AuthToken(String);
 
 impl AuthToken {
