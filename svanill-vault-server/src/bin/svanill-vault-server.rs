@@ -10,7 +10,9 @@ use std::sync::{Arc, Mutex};
 use structopt::StructOpt;
 use svanill_vault_server::auth_token::AuthToken;
 use svanill_vault_server::db::auth::TokensCache;
-use svanill_vault_server::models::{AnswerUserChallengeRequest, AskForTheChallengeResponse};
+use svanill_vault_server::models::{
+    AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
+};
 use svanill_vault_server::{db, errors::VaultError};
 
 type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
@@ -82,6 +84,7 @@ async fn auth_user_request_challenge(
 }
 
 async fn auth_user_answer_challenge(
+    req: HttpRequest,
     payload: web::Json<AnswerUserChallengeRequest>,
     pool: web::Data<DbPool>,
     crypto_key: web::Data<std::sync::Arc<ring::hmac::Key>>,
@@ -107,14 +110,36 @@ async fn auth_user_answer_challenge(
         // Store the token, alongside the user it represent
         tokens_cache.lock().unwrap().insert(token, user.username);
 
-        return Ok(token_as_string.into());
+        Ok(HttpResponse::Ok().json(
+            serde_json::from_value::<AnswerUserChallengeResponse>(json!({
+                "content": {
+                    "token": token_as_string
+                },
+                "links": {
+                    "files_list": hateoas_list_user_files(&req),
+                    "request_upload_url": hateoas_request_upload_url(&req),
+                },
+                "status":200
+            }))
+            .unwrap(),
+        ))
+    } else {
+        Err(VaultError::UserDoesNotExist.into())
     }
-
-    unimplemented!();
 }
 
 #[get("/users/")]
 async fn new_user() -> Result<HttpResponse, Error> {
+    unimplemented!()
+}
+
+#[get("/files/request-upload-url")]
+async fn request_upload_url() -> Result<HttpResponse, Error> {
+    unimplemented!()
+}
+
+#[get("/files/")]
+async fn list_user_files() -> Result<HttpResponse, Error> {
     unimplemented!()
 }
 
@@ -131,6 +156,22 @@ fn hateoas_auth_user_answer_challenge(req: &HttpRequest) -> serde_json::Value {
     json!({
         "href": url.as_str(),
         "rel": "auth"
+    })
+}
+
+fn hateoas_list_user_files(req: &HttpRequest) -> serde_json::Value {
+    let url = req.url_for_static("list_user_files").unwrap();
+    json!({
+        "href": url.as_str(),
+        "rel": "file"
+    })
+}
+
+fn hateoas_request_upload_url(req: &HttpRequest) -> serde_json::Value {
+    let url = req.url_for_static("request_upload_url").unwrap();
+    json!({
+        "href": url.as_str(),
+        "rel": "file"
     })
 }
 
@@ -185,6 +226,8 @@ async fn main() -> std::io::Result<()> {
                     .data(web::JsonConfig::default().limit(512)),
             )
             .service(new_user)
+            .service(request_upload_url)
+            .service(list_user_files)
             .default_service(
                 // 404 for GET request
                 web::resource("")
