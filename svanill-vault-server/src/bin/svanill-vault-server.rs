@@ -2,10 +2,12 @@ use actix_web::middleware::Logger;
 use actix_web::{get, guard, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
+use ring::{hmac, rand};
 use serde::Deserialize;
 use serde_json::json;
 use std::env;
 use structopt::StructOpt;
+use svanill_vault_server::auth_token::AuthToken;
 use svanill_vault_server::models::{AnswerUserChallengeRequest, AskForTheChallengeResponse};
 use svanill_vault_server::{db, errors::VaultError};
 
@@ -80,6 +82,7 @@ async fn auth_user_request_challenge(
 async fn auth_user_answer_challenge(
     payload: web::Json<AnswerUserChallengeRequest>,
     pool: web::Data<DbPool>,
+    crypto_key: web::Data<std::sync::Arc<ring::hmac::Key>>,
 ) -> Result<HttpResponse, Error> {
     let conn = pool.get().expect("couldn't get db connection from pool");
     let answer = payload.answer.clone();
@@ -96,6 +99,9 @@ async fn auth_user_answer_challenge(
     }
 
     // generate a new signed token
+    let token = AuthToken::new(&*crypto_key);
+    return Ok(token.to_string().into());
+
     // keep the token somewhere
     unimplemented!();
 }
@@ -145,15 +151,22 @@ async fn main() -> std::io::Result<()> {
         .build(manager)
         .expect("Failed to create database connection pool");
 
+    // generate server key, used to sign and verify tokens
+    let rng = rand::SystemRandom::new();
+    let key = std::sync::Arc::new(
+        hmac::Key::generate(hmac::HMAC_SHA256, &rng).expect("Cannot generate cryptographyc key"),
+    );
+
     HttpServer::new(move || {
         App::new()
             .data(pool.clone())
+            .data(key.clone())
             .wrap(Logger::default())
             .service(index)
             .service(auth_user_request_challenge)
             .service(
                 web::resource("/auth/answer-challenge")
-                    .route(web::get().to(auth_user_answer_challenge))
+                    .route(web::post().to(auth_user_answer_challenge))
                     .name("auth_user_answer_challenge")
                     .data(web::JsonConfig::default().limit(512)),
             )
