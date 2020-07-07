@@ -1,5 +1,5 @@
 use actix_web::middleware::Logger;
-use actix_web::{get, guard, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{get, guard, http, web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use ring::{hmac, rand};
@@ -12,6 +12,7 @@ use svanill_vault_server::auth_token::AuthToken;
 use svanill_vault_server::db::auth::TokensCache;
 use svanill_vault_server::models::{
     AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
+    GetStartingEndpointsResponse,
 };
 use svanill_vault_server::{db, errors::VaultError};
 
@@ -49,8 +50,17 @@ struct Opt {
 }
 
 #[get("/")]
-async fn index() -> impl Responder {
-    format!("todo")
+async fn index(req: HttpRequest) -> HttpResponse {
+    HttpResponse::Ok().json(
+        serde_json::from_value::<GetStartingEndpointsResponse>(json!({
+            "status": 200,
+            "links": {
+                "request_auth_challenge": hateoas_auth_user_request_challenge(&req),
+                "create_user": hateoas_new_user(&req)
+            }
+        }))
+        .unwrap(),
+    )
 }
 
 #[derive(Deserialize)]
@@ -167,6 +177,14 @@ fn hateoas_new_user(req: &HttpRequest) -> serde_json::Value {
 
 fn hateoas_auth_user_answer_challenge(req: &HttpRequest) -> serde_json::Value {
     let url = req.url_for_static("auth_user_answer_challenge").unwrap();
+    json!({
+        "href": url.as_str(),
+        "rel": "auth"
+    })
+}
+
+fn hateoas_auth_user_request_challenge(req: &HttpRequest) -> serde_json::Value {
+    let url = req.url_for_static("auth_user_request_challenge").unwrap();
     json!({
         "href": url.as_str(),
         "rel": "auth"
