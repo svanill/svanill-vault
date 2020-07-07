@@ -63,6 +63,13 @@ async fn index(req: HttpRequest) -> HttpResponse {
     )
 }
 
+#[get("/favicon.ico")]
+async fn favicon() -> HttpResponse {
+    HttpResponse::Ok()
+        .header(http::header::CONTENT_TYPE, "image/svg+xml")
+        .body(include_str!("../../favicon.svg"))
+}
+
 #[derive(Deserialize)]
 struct AuthRequestChallengeQueryFields {
     // XXX this is optional, but it shouldn't be. Maybe make it part of the URI?
@@ -249,6 +256,7 @@ async fn main() -> std::io::Result<()> {
             .data(key.clone())
             .data(tokens_cache.clone())
             .wrap(Logger::default())
+            .service(favicon)
             .service(index)
             .service(auth_user_request_challenge)
             .service(
