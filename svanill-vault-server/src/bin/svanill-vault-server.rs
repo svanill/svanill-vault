@@ -32,6 +32,20 @@ struct Opt {
     /// Database url
     #[structopt(short = "d", default_value = "vault.db", env = "SVANILL_VAULT_DB")]
     db_url: String,
+    /// Authorization Token timeout in minutes
+    #[structopt(
+        short = "t",
+        default_value = "60",
+        env = "SVANILL_VAULT_AUTH_TOKEN_TIMEOUT"
+    )]
+    auth_token_timeout: u32,
+    /// Max number of concurrent users
+    #[structopt(
+        short = "u",
+        default_value = "1000",
+        env = "SVANILL_VAULT_MAX_CONC_USERS"
+    )]
+    max_concurrent_users: usize,
 }
 
 #[get("/")]
@@ -207,8 +221,8 @@ async fn main() -> std::io::Result<()> {
 
     // Use a LRU cache to store tokens, until we add redis support
     let tokens_cache: Arc<Mutex<TokensCache>> = Arc::new(Mutex::new(TokensCache::new(
-        1000,
-        std::time::Duration::from_secs(60 * 60 * 2),
+        opt.max_concurrent_users,
+        std::time::Duration::from_secs(60 * opt.auth_token_timeout as u64),
     )));
 
     HttpServer::new(move || {
