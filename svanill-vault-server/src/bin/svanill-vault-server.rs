@@ -1,8 +1,10 @@
 use actix_web::middleware::Logger;
 use actix_web::{get, guard, http, web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use anyhow::Result;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use ring::{hmac, rand};
+use rusoto_core::Region;
 use serde::Deserialize;
 use serde_json::json;
 use std::env;
@@ -10,6 +12,7 @@ use std::sync::{Arc, Mutex};
 use structopt::StructOpt;
 use svanill_vault_server::auth_token::AuthToken;
 use svanill_vault_server::db::auth::TokensCache;
+use svanill_vault_server::file_server;
 use svanill_vault_server::models::{
     AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
     GetStartingEndpointsResponse,
@@ -47,6 +50,28 @@ struct Opt {
         env = "SVANILL_VAULT_MAX_CONC_USERS"
     )]
     max_concurrent_users: usize,
+    /// S3 bucket
+    #[structopt(long = "s3-bucket", env = "SVANILL_VAULT_S3_BUCKET")]
+    s3_bucket: String,
+    /// S3 region
+    #[structopt(long = "s3-region")]
+    s3_region: Option<String>,
+    /// S3 access key id
+    #[structopt(long = "s3-access-key-id")]
+    s3_access_key_id: Option<String>,
+    /// S3 secret access key
+    #[structopt(long = "s3-secret-access-key")]
+    s3_secret_access_key: Option<String>,
+    /// S3 endpoint (optional, for S3 compatible servers)
+    #[structopt(long = "s3-endpoint", env = "SVANILL_VAULT_S3_ENDPOINT")]
+    s3_endpoint: Option<String>,
+    /// Max number of concurrent users
+    #[structopt(
+        long = "url-duration",
+        default_value = "5",
+        env = "SVANILL_VAULT_URL_DURATION"
+    )]
+    presigned_url_duration_in_min: u32,
 }
 
 #[get("/")]
@@ -225,14 +250,36 @@ async fn method_not_allowed() -> Result<&'static str, Error> {
 }
 
 #[actix_rt::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<()> {
     env::set_var(
         "RUST_LOG",
-        "actix_http=debug,actix_web=debug,actix_server=info",
+        "rusoto,actix_http=debug,actix_web=debug,actix_server=info",
     );
     env_logger::init();
 
     let opt = Opt::from_args();
+
+    if let Some(region) = opt.s3_region {
+        env::set_var("AWS_DEFAULT_REGION", region);
+    }
+
+    let region = if let Some(s3_endpoint) = opt.s3_endpoint {
+        Region::Custom {
+            name: env::var("AWS_DEFAULT_REGION").unwrap_or_else(|_| "us-east-1".to_owned()),
+            endpoint: s3_endpoint,
+        }
+    } else {
+        Region::default()
+    };
+
+    let s3_fs = Arc::new(
+        file_server::FileServer::new(
+            region,
+            opt.s3_bucket,
+            std::time::Duration::from_secs(opt.presigned_url_duration_in_min as u64 * 60),
+        )
+        .await?,
+    );
 
     // set up database connection pool
     let connspec = opt.db_url;
@@ -258,6 +305,7 @@ async fn main() -> std::io::Result<()> {
             .data(pool.clone())
             .data(key.clone())
             .data(tokens_cache.clone())
+            .data(s3_fs.clone())
             .wrap(Logger::default())
             .service(favicon)
             .service(index)
@@ -285,5 +333,7 @@ async fn main() -> std::io::Result<()> {
     })
     .bind((opt.host, opt.port))?
     .run()
-    .await
+    .await?;
+
+    Ok::<(), anyhow::Error>(())
 }

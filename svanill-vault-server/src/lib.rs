@@ -5,4 +5,5 @@ extern crate serde_derive;
 pub mod auth_token;
 pub mod db;
 pub mod errors;
+pub mod file_server;
 pub mod models;
