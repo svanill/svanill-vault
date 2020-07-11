@@ -226,7 +226,10 @@ async fn method_not_allowed() -> Result<&'static str, Error> {
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
-    env::set_var("RUST_LOG", "actix_web=debug,actix_server=info");
+    env::set_var(
+        "RUST_LOG",
+        "actix_http=debug,actix_web=debug,actix_server=info",
+    );
     env_logger::init();
 
     let opt = Opt::from_args();
