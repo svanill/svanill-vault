@@ -15,7 +15,8 @@ use svanill_vault_server::db::auth::TokensCache;
 use svanill_vault_server::file_server;
 use svanill_vault_server::models::{
     AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
-    GetStartingEndpointsResponse,
+    GetStartingEndpointsResponse, RetrieveListOfUserFilesResponse,
+    RetrieveListOfUserFilesResponseContentItemContent,
 };
 use svanill_vault_server::{db, errors::VaultError};
 
@@ -200,12 +201,28 @@ async fn list_user_files(
 ) -> Result<HttpResponse, Error> {
     // XXX TODO Verify authorization
     // XXX TODO Limit files to the one owned by the authorized users
-    // XXX TODO Emit correct JSON
+
     let files = s3_fs
         .get_files_list("")
         .await
         .map_err(VaultError::S3Error)?;
-    Ok(HttpResponse::Ok().finish())
+
+    Ok(HttpResponse::Ok().json(
+        serde_json::from_value::<RetrieveListOfUserFilesResponse>(json!({
+            "content": files.iter().map(|f| {
+                json!({
+                    "content": f,
+                    "links": {
+                        "delete": hateoas_file_delete(f),
+                        "read": hateoas_file_read(f),
+                    },
+                    "status":200
+                })
+            }).collect::<Vec<serde_json::value::Value>>(),
+            "status":200,
+        }))
+        .unwrap(),
+    ))
 }
 
 fn hateoas_new_user(req: &HttpRequest) -> serde_json::Value {
@@ -244,6 +261,22 @@ fn hateoas_request_upload_url(req: &HttpRequest) -> serde_json::Value {
     let url = req.url_for_static("request_upload_url").unwrap();
     json!({
         "href": url.as_str(),
+        "rel": "file"
+    })
+}
+
+fn hateoas_file_read(f: &RetrieveListOfUserFilesResponseContentItemContent) -> serde_json::Value {
+    json!({
+        "href": &f.filename,
+        "rel": "file"
+    })
+}
+
+fn hateoas_file_delete(
+    _f: &RetrieveListOfUserFilesResponseContentItemContent,
+) -> serde_json::Value {
+    json!({
+        "href": "unimplemented",
         "rel": "file"
     })
 }
