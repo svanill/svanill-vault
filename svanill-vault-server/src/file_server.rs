@@ -55,7 +55,7 @@ impl FileServer {
         })
     }
 
-    pub async fn get_files_list(&self, username: &str) -> Result<FilesList, FileServerError> {
+    pub async fn get_files_list(&self, username: &str) -> Result<Vec<FileDTO>, FileServerError> {
         let list_request = ListObjectsV2Request {
             bucket: self.bucket.clone(),
             prefix: Some(username.to_string()),
@@ -103,7 +103,7 @@ impl FileServer {
         )
         .await?;
 
-        Ok(FilesList { files })
+        Ok(files)
     }
 
     pub fn get_presigned_retrieve_url(&self, key: String) -> String {
@@ -120,9 +120,4 @@ impl FileServer {
             },
         )
     }
-}
-
-#[derive(Debug)]
-pub struct FilesList {
-    pub files: Vec<FileDTO>,
 }
