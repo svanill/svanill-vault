@@ -195,8 +195,17 @@ async fn request_upload_url() -> Result<HttpResponse, Error> {
 }
 
 #[get("/files/")]
-async fn list_user_files() -> Result<HttpResponse, Error> {
-    unimplemented!()
+async fn list_user_files(
+    s3_fs: web::Data<Arc<file_server::FileServer>>,
+) -> Result<HttpResponse, Error> {
+    // XXX TODO Verify authorization
+    // XXX TODO Limit files to the one owned by the authorized users
+    // XXX TODO Emit correct JSON
+    let files = s3_fs
+        .get_files_list("")
+        .await
+        .map_err(VaultError::S3Error)?;
+    Ok(HttpResponse::Ok().finish())
 }
 
 fn hateoas_new_user(req: &HttpRequest) -> serde_json::Value {

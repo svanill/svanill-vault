@@ -1,3 +1,4 @@
+use crate::file_server::FileServerError;
 use actix_http::ResponseBuilder;
 use actix_web::{error, http::header, http::StatusCode, HttpResponse};
 use serde::ser::Serializer;
@@ -59,6 +60,7 @@ pub enum VaultError {
     UserDoesNotExist,
     DatabaseError(#[from] diesel::result::Error),
     ChallengeMismatchError,
+    S3Error(FileServerError),
 }
 
 impl From<&VaultError> for ApiError {
@@ -94,6 +96,9 @@ impl From<&VaultError> for ApiError {
                 1021,
                 String::from("Internal Server Error"),
             ),
+            VaultError::S3Error(e) => {
+                ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, 1022, e.to_string())
+            }
         }
     }
 }
