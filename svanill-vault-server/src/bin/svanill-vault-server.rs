@@ -16,8 +16,8 @@ use serde_json::json;
 use std::env;
 use std::sync::{Arc, RwLock};
 use structopt::StructOpt;
+use svanill_vault_server::auth::TokensCache;
 use svanill_vault_server::auth_token::AuthToken;
-use svanill_vault_server::db::auth::TokensCache;
 use svanill_vault_server::file_server;
 use svanill_vault_server::models::{
     AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
