@@ -1,4 +1,4 @@
-use crate::auth_token::AuthToken;
+use crate::auth::auth_token::AuthToken;
 use lru_cache::LruCache;
 use std::time::{Duration, Instant};
 

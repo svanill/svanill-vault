@@ -1,8 +1,5 @@
-use actix_http::HttpMessage;
 use actix_web::middleware::Logger;
-use actix_web::{dev::ServiceRequest, guard, http, web, App, Error, HttpServer};
-use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
-use actix_web_httpauth::extractors::AuthenticationError;
+use actix_web::{guard, http, web, App, Error, HttpServer};
 use actix_web_httpauth::middleware::HttpAuthentication;
 use anyhow::Result;
 use diesel::prelude::*;
@@ -12,12 +9,11 @@ use rusoto_core::Region;
 use std::env;
 use std::sync::{Arc, RwLock};
 use structopt::StructOpt;
-use svanill_vault_server::auth::TokensCache;
-use svanill_vault_server::auth_token::AuthToken;
+use svanill_vault_server::auth::tokens_cache::TokensCache;
 use svanill_vault_server::errors::VaultError;
 use svanill_vault_server::file_server;
 use svanill_vault_server::http as vault_http;
-use svanill_vault_server::http::Username;
+use svanill_vault_server::http::auth_middleware::auth_validator;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -70,35 +66,6 @@ struct Opt {
         env = "SVANILL_VAULT_URL_DURATION"
     )]
     presigned_url_duration_in_min: u32,
-}
-
-pub fn validate_token(
-    tokens_cache: web::Data<Arc<RwLock<TokensCache>>>,
-    token: AuthToken,
-) -> Option<Username> {
-    tokens_cache
-        .write()
-        .unwrap() // PANIC on token's lock poisoned
-        .get_username(&token)
-        .map(Username)
-}
-
-async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error> {
-    let config = req
-        .app_data::<Config>()
-        .map(|data| data.get_ref().clone())
-        .unwrap_or_else(Default::default);
-
-    let maybe_tokens_cache = req.app_data::<Arc<RwLock<TokensCache>>>();
-    let tokens_cache = maybe_tokens_cache.unwrap(); // PANIC on missing tokens cache
-
-    match validate_token(tokens_cache, AuthToken(credentials.token().to_owned())) {
-        Some(user) => {
-            req.extensions_mut().insert(user);
-            Ok(req)
-        }
-        None => Err(AuthenticationError::from(config).into()),
-    }
 }
 
 /// 404 handler
@@ -164,7 +131,7 @@ async fn main() -> Result<()> {
 
     HttpServer::new(move || {
         // Setup authentication middleware
-        let auth = HttpAuthentication::bearer(validator);
+        let auth = HttpAuthentication::bearer(auth_validator);
 
         App::new()
             .data(pool.clone())

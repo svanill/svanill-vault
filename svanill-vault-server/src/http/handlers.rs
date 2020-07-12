@@ -1,7 +1,7 @@
-use crate::auth::TokensCache;
-use crate::auth_token::AuthToken;
+use crate::auth::auth_token::AuthToken;
+use crate::auth::tokens_cache::TokensCache;
+use crate::auth::Username;
 use crate::file_server;
-use crate::http::Username;
 use crate::models::{
     AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
     GetStartingEndpointsResponse, RetrieveListOfUserFilesResponse,
