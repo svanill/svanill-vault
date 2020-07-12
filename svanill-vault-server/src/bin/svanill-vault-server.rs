@@ -1,8 +1,6 @@
 use actix_http::HttpMessage;
 use actix_web::middleware::Logger;
-use actix_web::{
-    dev::ServiceRequest, get, guard, http, web, App, Error, HttpRequest, HttpResponse, HttpServer,
-};
+use actix_web::{dev::ServiceRequest, guard, http, web, App, Error, HttpServer};
 use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
 use actix_web_httpauth::extractors::AuthenticationError;
 use actix_web_httpauth::middleware::HttpAuthentication;
@@ -11,22 +9,15 @@ use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use ring::{hmac, rand};
 use rusoto_core::Region;
-use serde::Deserialize;
-use serde_json::json;
 use std::env;
 use std::sync::{Arc, RwLock};
 use structopt::StructOpt;
 use svanill_vault_server::auth::TokensCache;
 use svanill_vault_server::auth_token::AuthToken;
+use svanill_vault_server::errors::VaultError;
 use svanill_vault_server::file_server;
-use svanill_vault_server::models::{
-    AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
-    GetStartingEndpointsResponse, RetrieveListOfUserFilesResponse,
-    RetrieveListOfUserFilesResponseContentItemContent,
-};
-use svanill_vault_server::{db, errors::VaultError};
-
-type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
+use svanill_vault_server::http as vault_http;
+use svanill_vault_server::http::Username;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -80,215 +71,6 @@ struct Opt {
     )]
     presigned_url_duration_in_min: u32,
 }
-
-#[get("/")]
-async fn index(req: HttpRequest) -> HttpResponse {
-    HttpResponse::Ok().json(
-        serde_json::from_value::<GetStartingEndpointsResponse>(json!({
-            "status": 200,
-            "links": {
-                "request_auth_challenge": hateoas_auth_user_request_challenge(&req),
-                "create_user": hateoas_new_user(&req)
-            }
-        }))
-        .unwrap(),
-    )
-}
-
-#[get("/favicon.ico")]
-async fn favicon() -> HttpResponse {
-    HttpResponse::Ok()
-        .header(http::header::CONTENT_TYPE, "image/svg+xml")
-        .body(include_str!("../../favicon.svg"))
-}
-
-#[derive(Deserialize)]
-struct AuthRequestChallengeQueryFields {
-    // XXX this is optional, but it shouldn't be. Maybe make it part of the URI?
-    username: Option<String>,
-}
-
-#[get("/auth/request-challenge")]
-async fn auth_user_request_challenge(
-    req: HttpRequest,
-    pool: web::Data<DbPool>,
-    q: web::Query<AuthRequestChallengeQueryFields>,
-) -> Result<HttpResponse, Error> {
-    let conn = pool.get().expect("couldn't get db connection from pool");
-
-    if q.username.is_none() {
-        return Err(VaultError::FieldRequired {
-            field: "username".into(),
-        }
-        .into());
-    };
-
-    let maybe_user =
-        web::block(move || db::actions::find_user_by_username(&conn, q.username.as_ref().unwrap()))
-            .await?;
-
-    if let Some(user) = maybe_user {
-        Ok(HttpResponse::Ok().json(
-            serde_json::from_value::<AskForTheChallengeResponse>(json!({
-                "status": 200,
-                "content": {
-                    "challenge": user.challenge,
-                },
-                "links": {
-                    "answer_auth_challenge": hateoas_auth_user_answer_challenge(&req),
-                    "create_user": hateoas_new_user(&req)
-                }
-            }))
-            .unwrap(),
-        ))
-    } else {
-        Err(VaultError::UserDoesNotExist.into())
-    }
-}
-
-async fn auth_user_answer_challenge(
-    req: HttpRequest,
-    payload: web::Json<AnswerUserChallengeRequest>,
-    pool: web::Data<DbPool>,
-    crypto_key: web::Data<std::sync::Arc<ring::hmac::Key>>,
-    tokens_cache: web::Data<Arc<RwLock<TokensCache>>>,
-) -> Result<HttpResponse, Error> {
-    let conn = pool.get().expect("couldn't get db connection from pool");
-    let answer = payload.answer.clone();
-
-    let maybe_user =
-        web::block(move || db::actions::find_user_by_username(&conn, &payload.username)).await?;
-
-    if let Some(user) = maybe_user {
-        let correct_answer = user.answer;
-
-        if answer != correct_answer {
-            return Err(VaultError::ChallengeMismatchError.into());
-        }
-
-        // Generate a new signed token
-        let token = AuthToken::new(&*crypto_key);
-        let token_as_string = token.to_string();
-
-        // Store the token, alongside the user it represent
-        tokens_cache.write().unwrap().insert(token, user.username);
-
-        Ok(HttpResponse::Ok().json(
-            serde_json::from_value::<AnswerUserChallengeResponse>(json!({
-                "content": {
-                    "token": token_as_string
-                },
-                "links": {
-                    "files_list": hateoas_list_user_files(&req),
-                    "request_upload_url": hateoas_request_upload_url(&req),
-                },
-                "status":200
-            }))
-            .unwrap(),
-        ))
-    } else {
-        Err(VaultError::UserDoesNotExist.into())
-    }
-}
-
-#[get("/users/")]
-async fn new_user() -> Result<HttpResponse, Error> {
-    unimplemented!()
-}
-
-#[get("/files/request-upload-url")]
-async fn request_upload_url() -> Result<HttpResponse, Error> {
-    unimplemented!()
-}
-
-#[get("/files/")]
-async fn list_user_files(
-    req: HttpRequest,
-    s3_fs: web::Data<Arc<file_server::FileServer>>,
-) -> Result<HttpResponse, Error> {
-    let exts = req.extensions();
-    let username = &exts.get::<Username>().unwrap().0;
-
-    let files = s3_fs
-        .get_files_list(username)
-        .await
-        .map_err(VaultError::S3Error)?;
-
-    Ok(HttpResponse::Ok().json(
-        serde_json::from_value::<RetrieveListOfUserFilesResponse>(json!({
-            "content": files.iter().map(|f| {
-                json!({
-                    "content": f,
-                    "links": {
-                        "delete": hateoas_file_delete(f),
-                        "read": hateoas_file_read(f),
-                    },
-                    "status":200
-                })
-            }).collect::<Vec<serde_json::value::Value>>(),
-            "status":200,
-        }))
-        .unwrap(),
-    ))
-}
-
-fn hateoas_new_user(req: &HttpRequest) -> serde_json::Value {
-    let url = req.url_for_static("new_user").unwrap();
-    json!({
-        "href": url.as_str(),
-        "rel": "user"
-    })
-}
-
-fn hateoas_auth_user_answer_challenge(req: &HttpRequest) -> serde_json::Value {
-    let url = req.url_for_static("auth_user_answer_challenge").unwrap();
-    json!({
-        "href": url.as_str(),
-        "rel": "auth"
-    })
-}
-
-fn hateoas_auth_user_request_challenge(req: &HttpRequest) -> serde_json::Value {
-    let url = req.url_for_static("auth_user_request_challenge").unwrap();
-    json!({
-        "href": url.as_str(),
-        "rel": "auth"
-    })
-}
-
-fn hateoas_list_user_files(req: &HttpRequest) -> serde_json::Value {
-    let url = req.url_for_static("list_user_files").unwrap();
-    json!({
-        "href": url.as_str(),
-        "rel": "file"
-    })
-}
-
-fn hateoas_request_upload_url(req: &HttpRequest) -> serde_json::Value {
-    let url = req.url_for_static("request_upload_url").unwrap();
-    json!({
-        "href": url.as_str(),
-        "rel": "file"
-    })
-}
-
-fn hateoas_file_read(f: &RetrieveListOfUserFilesResponseContentItemContent) -> serde_json::Value {
-    json!({
-        "href": &f.url,
-        "rel": "file"
-    })
-}
-
-fn hateoas_file_delete(
-    _f: &RetrieveListOfUserFilesResponseContentItemContent,
-) -> serde_json::Value {
-    json!({
-        "href": "unimplemented",
-        "rel": "file"
-    })
-}
-
-pub struct Username(pub String);
 
 pub fn validate_token(
     tokens_cache: web::Data<Arc<RwLock<TokensCache>>>,
@@ -401,21 +183,21 @@ async fn main() -> Result<()> {
                     .max_age(86400)
                     .finish(),
             )
-            .service(favicon)
-            .service(index)
-            .service(auth_user_request_challenge)
+            .service(vault_http::handlers::favicon)
+            .service(vault_http::handlers::index)
+            .service(vault_http::handlers::auth_user_request_challenge)
             .service(
                 web::resource("/auth/answer-challenge")
-                    .route(web::post().to(auth_user_answer_challenge))
+                    .route(web::post().to(vault_http::handlers::auth_user_answer_challenge))
                     .name("auth_user_answer_challenge")
                     .data(web::JsonConfig::default().limit(512)),
             )
             .service(
                 web::scope("")
                     .wrap(auth)
-                    .service(new_user)
-                    .service(request_upload_url)
-                    .service(list_user_files),
+                    .service(vault_http::handlers::new_user)
+                    .service(vault_http::handlers::request_upload_url)
+                    .service(vault_http::handlers::list_user_files),
             )
             .default_service(
                 // 404 for GET request
