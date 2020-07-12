@@ -8,7 +8,7 @@ use rusoto_core::Region;
 use serde::Deserialize;
 use serde_json::json;
 use std::env;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use structopt::StructOpt;
 use svanill_vault_server::auth_token::AuthToken;
 use svanill_vault_server::db::auth::TokensCache;
@@ -145,7 +145,7 @@ async fn auth_user_answer_challenge(
     payload: web::Json<AnswerUserChallengeRequest>,
     pool: web::Data<DbPool>,
     crypto_key: web::Data<std::sync::Arc<ring::hmac::Key>>,
-    tokens_cache: web::Data<Arc<Mutex<TokensCache>>>,
+    tokens_cache: web::Data<Arc<RwLock<TokensCache>>>,
 ) -> Result<HttpResponse, Error> {
     let conn = pool.get().expect("couldn't get db connection from pool");
     let answer = payload.answer.clone();
@@ -165,7 +165,7 @@ async fn auth_user_answer_challenge(
         let token_as_string = token.to_string();
 
         // Store the token, alongside the user it represent
-        tokens_cache.lock().unwrap().insert(token, user.username);
+        tokens_cache.write().unwrap().insert(token, user.username);
 
         Ok(HttpResponse::Ok().json(
             serde_json::from_value::<AnswerUserChallengeResponse>(json!({
@@ -337,7 +337,7 @@ async fn main() -> Result<()> {
     );
 
     // Use a LRU cache to store tokens, until we add redis support
-    let tokens_cache: Arc<Mutex<TokensCache>> = Arc::new(Mutex::new(TokensCache::new(
+    let tokens_cache: Arc<RwLock<TokensCache>> = Arc::new(RwLock::new(TokensCache::new(
         opt.max_concurrent_users,
         std::time::Duration::from_secs(60 * opt.auth_token_timeout as u64),
     )));
