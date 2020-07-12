@@ -390,6 +390,17 @@ async fn main() -> Result<()> {
             .data(tokens_cache.clone())
             .data(s3_fs.clone())
             .wrap(Logger::default())
+            .wrap(
+                actix_cors::Cors::new()
+                    .allowed_methods(vec!["HEAD", "OPTIONS", "GET", "POST", "PUT", "DELETE"])
+                    .allowed_headers(vec![
+                        http::header::AUTHORIZATION,
+                        http::header::ACCEPT,
+                        http::header::CONTENT_TYPE,
+                    ])
+                    .max_age(86400)
+                    .finish(),
+            )
             .service(favicon)
             .service(index)
             .service(auth_user_request_challenge)
