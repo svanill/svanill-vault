@@ -1,5 +1,11 @@
+use actix_http::HttpMessage;
 use actix_web::middleware::Logger;
-use actix_web::{get, guard, http, web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{
+    dev::ServiceRequest, get, guard, http, web, App, Error, HttpRequest, HttpResponse, HttpServer,
+};
+use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
+use actix_web_httpauth::extractors::AuthenticationError;
+use actix_web_httpauth::middleware::HttpAuthentication;
 use anyhow::Result;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
@@ -197,13 +203,14 @@ async fn request_upload_url() -> Result<HttpResponse, Error> {
 
 #[get("/files/")]
 async fn list_user_files(
+    req: HttpRequest,
     s3_fs: web::Data<Arc<file_server::FileServer>>,
 ) -> Result<HttpResponse, Error> {
-    // XXX TODO Verify authorization
-    // XXX TODO Limit files to the one owned by the authorized users
+    let exts = req.extensions();
+    let username = &exts.get::<Username>().unwrap().0;
 
     let files = s3_fs
-        .get_files_list("")
+        .get_files_list(username)
         .await
         .map_err(VaultError::S3Error)?;
 
@@ -267,7 +274,7 @@ fn hateoas_request_upload_url(req: &HttpRequest) -> serde_json::Value {
 
 fn hateoas_file_read(f: &RetrieveListOfUserFilesResponseContentItemContent) -> serde_json::Value {
     json!({
-        "href": &f.filename,
+        "href": &f.url,
         "rel": "file"
     })
 }
@@ -279,6 +286,37 @@ fn hateoas_file_delete(
         "href": "unimplemented",
         "rel": "file"
     })
+}
+
+pub struct Username(pub String);
+
+pub fn validate_token(
+    tokens_cache: web::Data<Arc<RwLock<TokensCache>>>,
+    token: AuthToken,
+) -> Option<Username> {
+    tokens_cache
+        .write()
+        .unwrap() // PANIC on token's lock poisoned
+        .get_username(&token)
+        .map(Username)
+}
+
+async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error> {
+    let config = req
+        .app_data::<Config>()
+        .map(|data| data.get_ref().clone())
+        .unwrap_or_else(Default::default);
+
+    let maybe_tokens_cache = req.app_data::<Arc<RwLock<TokensCache>>>();
+    let tokens_cache = maybe_tokens_cache.unwrap(); // PANIC on missing tokens cache
+
+    match validate_token(tokens_cache, AuthToken(credentials.token().to_owned())) {
+        Some(user) => {
+            req.extensions_mut().insert(user);
+            Ok(req)
+        }
+        None => Err(AuthenticationError::from(config).into()),
+    }
 }
 
 /// 404 handler
@@ -295,7 +333,7 @@ async fn method_not_allowed() -> Result<&'static str, Error> {
 async fn main() -> Result<()> {
     env::set_var(
         "RUST_LOG",
-        "rusoto,actix_http=debug,actix_web=debug,actix_server=info",
+        "info,rusoto=warn,actix_http=debug,actix_web=debug,actix_server=info",
     );
     env_logger::init();
 
@@ -343,6 +381,9 @@ async fn main() -> Result<()> {
     )));
 
     HttpServer::new(move || {
+        // Setup authentication middleware
+        let auth = HttpAuthentication::bearer(validator);
+
         App::new()
             .data(pool.clone())
             .data(key.clone())
@@ -358,9 +399,13 @@ async fn main() -> Result<()> {
                     .name("auth_user_answer_challenge")
                     .data(web::JsonConfig::default().limit(512)),
             )
-            .service(new_user)
-            .service(request_upload_url)
-            .service(list_user_files)
+            .service(
+                web::scope("")
+                    .wrap(auth)
+                    .service(new_user)
+                    .service(request_upload_url)
+                    .service(list_user_files),
+            )
             .default_service(
                 // 404 for GET request
                 web::resource("")

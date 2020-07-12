@@ -4,7 +4,7 @@ use std::fmt;
 use std::hash::Hash;
 
 #[derive(Eq, PartialEq, Hash)]
-pub struct AuthToken(String);
+pub struct AuthToken(pub String);
 
 impl AuthToken {
     pub fn new(crypto_key: &ring::hmac::Key) -> AuthToken {

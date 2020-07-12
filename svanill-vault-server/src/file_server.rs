@@ -58,7 +58,7 @@ impl FileServer {
     pub async fn get_files_list(&self, username: &str) -> Result<Vec<FileDTO>, FileServerError> {
         let list_request = ListObjectsV2Request {
             bucket: self.bucket.clone(),
-            prefix: Some(username.to_string()),
+            prefix: Some(format!("users/{}/", username)),
             ..Default::default()
         };
 
