@@ -8,7 +8,7 @@ license = "AGPL-3.0-or-later"
 readme = "README.md"
 
 [dependencies]
-actix-web = "2.0.0"
+actix-web = { version = "2.0.0", features = ["rustls"] }
 actix-rt = "1.1.1"
 env_logger = "0.7.1"
 structopt = "0.3.15"
@@ -22,9 +22,9 @@ thiserror = "1.0.20"
 ring = "0.16.15"
 hex = "0.4.2"
 lru-cache = "0.1.2"
-rusoto_core = "0.44.0"
-rusoto_s3 = "0.44.0"
-rusoto_credential = "0.44.0"
+rusoto_core = { version = "0.45.0", default-features = false, features = ["rustls"] }
+rusoto_s3 = { version = "0.45.0", default-features = false, features = ["rustls"] }
+rusoto_credential = "0.45.0"
 futures = "0.3.5"
 anyhow = "1.0.31"
 actix-web-httpauth = "0.4.2"
