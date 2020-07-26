@@ -61,6 +61,7 @@ pub enum VaultError {
     DatabaseError(#[from] diesel::result::Error),
     ChallengeMismatchError,
     S3Error(FileServerError),
+    UnexpectedError(String),
 }
 
 impl From<&VaultError> for ApiError {
@@ -99,6 +100,11 @@ impl From<&VaultError> for ApiError {
             VaultError::S3Error(e) => {
                 ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, 1022, e.to_string())
             }
+            VaultError::UnexpectedError(_) => ApiError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                1023,
+                String::from("Internal Server Error"),
+            ),
         }
     }
 }

@@ -8,3 +8,4 @@ pub mod errors;
 pub mod file_server;
 pub mod http;
 pub mod models;
+mod rusoto_extra;

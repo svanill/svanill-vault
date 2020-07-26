@@ -566,9 +566,9 @@ checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 
 [[package]]
 name = "chrono"
-version = "0.4.12"
+version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0fee792e164f78f5fe0c296cc2eb3688a2ca2b70cdff33040922d298203f0c4"
+checksum = "c74d84029116787153e02106bf53e66828452a4b325cc8652b788b5967c0a0b6"
 dependencies = [
  "num-integer",
  "num-traits",
@@ -1813,33 +1813,13 @@ dependencies = [
  "md5",
  "percent-encoding",
  "pin-project",
- "rusoto_credential 0.45.0",
- "rusoto_signature 0.45.0",
+ "rusoto_credential",
+ "rusoto_signature",
  "rustc_version",
  "serde",
  "serde_json",
  "tokio",
  "xml-rs",
-]
-
-[[package]]
-name = "rusoto_credential"
-version = "0.44.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60669ddc1bdbb83ce225593649d36b4c5f6bf9db47cc1ab3e81281abffc853f4"
-dependencies = [
- "async-trait",
- "chrono",
- "dirs",
- "futures",
- "hyper",
- "pin-project",
- "regex",
- "serde",
- "serde_json",
- "shlex",
- "tokio",
- "zeroize",
 ]
 
 [[package]]
@@ -1877,31 +1857,6 @@ dependencies = [
 
 [[package]]
 name = "rusoto_signature"
-version = "0.44.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9eddff187ac18c5a91d9ccda9353f30cf531620dce437c4db661dfe2e23b2029"
-dependencies = [
- "base64 0.12.3",
- "bytes",
- "futures",
- "hex",
- "hmac 0.7.1",
- "http",
- "hyper",
- "log",
- "md5",
- "percent-encoding",
- "pin-project",
- "rusoto_credential 0.44.0",
- "rustc_version",
- "serde",
- "sha2 0.8.2",
- "time 0.2.16",
- "tokio",
-]
-
-[[package]]
-name = "rusoto_signature"
 version = "0.45.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97a740a88dde8ded81b6f2cff9cd5e054a5a2e38a38397260f7acdd2c85d17dd"
@@ -1917,7 +1872,7 @@ dependencies = [
  "md5",
  "percent-encoding",
  "pin-project",
- "rusoto_credential 0.45.0",
+ "rusoto_credential",
  "rustc_version",
  "serde",
  "sha2 0.9.1",
@@ -2305,6 +2260,8 @@ dependencies = [
  "actix-web",
  "actix-web-httpauth",
  "anyhow",
+ "base64 0.12.3",
+ "chrono",
  "diesel",
  "env_logger",
  "futures",
@@ -2315,15 +2272,16 @@ dependencies = [
  "lru-cache",
  "ring",
  "rusoto_core",
- "rusoto_credential 0.45.0",
+ "rusoto_credential",
  "rusoto_s3",
  "rusoto_signature",
  "serde",
  "serde_derive",
  "serde_json",
- "sha2",
+ "sha2 0.8.2",
  "structopt",
  "thiserror",
+ "time 0.2.16",
 ]
 
 [[package]]

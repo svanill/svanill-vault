@@ -1,4 +1,6 @@
 use crate::models::RetrieveListOfUserFilesResponseContentItemContent;
+use crate::rusoto_extra::PostPolicy;
+use chrono::Utc;
 use futures::future::try_join_all;
 use rusoto_core::request::TlsError;
 use rusoto_core::{HttpClient, Region, RusotoError};
@@ -9,6 +11,7 @@ use rusoto_s3::{
     S3Client, S3,
 };
 use std::default::Default;
+use std::{collections::HashMap, ops::Add};
 use thiserror::Error;
 
 type FileDTO = RetrieveListOfUserFilesResponseContentItemContent;
@@ -119,5 +122,30 @@ impl FileServer {
                 expires_in: self.presigned_url_timeout,
             },
         )
+    }
+
+    pub fn get_post_policy_data(
+        &self,
+        filename: &str,
+    ) -> Result<(String, String, HashMap<String, String>), String> {
+        let bytes_range_min = 10;
+        let bytes_range_max = 1_048_576;
+
+        let expiration_date = Utc::now()
+            .add(chrono::Duration::from_std(self.presigned_url_timeout).expect("time overflow"));
+
+        let (upload_url, form_data) = PostPolicy::default()
+            .set_bucket_name(&self.bucket)
+            .set_region(&self.region)
+            .set_access_key_id(&self.credentials.aws_access_key_id())
+            .set_secret_access_key(&self.credentials.aws_secret_access_key())
+            .set_key(&filename)
+            .set_content_length_range(bytes_range_min, bytes_range_max)
+            .set_expiration(expiration_date)
+            .build_form_data()?;
+
+        let retrieve_url = self.get_presigned_retrieve_url(filename.to_string());
+
+        Ok((upload_url, retrieve_url, form_data))
     }
 }

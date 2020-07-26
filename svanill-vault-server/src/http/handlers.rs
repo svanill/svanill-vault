@@ -4,11 +4,11 @@ use crate::auth::Username;
 use crate::file_server;
 use crate::models::{
     AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
-    GetStartingEndpointsResponse, RetrieveListOfUserFilesResponse,
-    RetrieveListOfUserFilesResponseContentItemContent,
+    GetStartingEndpointsResponse, RequestUploadUrlRequestBody, RequestUploadUrlResponse,
+    RetrieveListOfUserFilesResponse, RetrieveListOfUserFilesResponseContentItemContent,
 };
 use crate::{db, errors::VaultError};
-use actix_web::{get, http, web, Error, HttpRequest, HttpResponse};
+use actix_web::{get, http, post, web, Error, HttpRequest, HttpResponse};
 use anyhow::Result;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
@@ -133,9 +133,34 @@ pub async fn new_user() -> Result<HttpResponse, Error> {
     unimplemented!()
 }
 
-#[get("/files/request-upload-url")]
-pub async fn request_upload_url() -> Result<HttpResponse, Error> {
-    unimplemented!()
+#[post("/files/request-upload-url")]
+pub async fn request_upload_url(
+    payload: web::Json<RequestUploadUrlRequestBody>,
+    s3_fs: web::Data<Arc<file_server::FileServer>>,
+) -> Result<HttpResponse, Error> {
+    let filename = &payload.filename;
+
+    let (upload_url, retrieve_url, form_data) = s3_fs
+        .get_post_policy_data(&filename)
+        .map_err(VaultError::UnexpectedError)?;
+
+    Ok(HttpResponse::Ok().json(
+        serde_json::from_value::<RequestUploadUrlResponse>(json!({
+            "links": {
+                "retrieve_url": {
+                    "href": retrieve_url,
+                    "rel": "file",
+                },
+                "upload_url": {
+                    "form_data": form_data,
+                    "href": upload_url,
+                    "rel": "file",
+                }
+            },
+            "status":200
+        }))
+        .unwrap(),
+    ))
 }
 
 #[get("/files/")]
