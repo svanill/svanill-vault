@@ -7,5 +7,5 @@ pub mod db;
 pub mod errors;
 pub mod file_server;
 pub mod http;
-pub mod models;
+pub mod openapi_models;
 mod rusoto_extra;

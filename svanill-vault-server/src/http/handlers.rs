@@ -2,7 +2,7 @@ use crate::auth::auth_token::AuthToken;
 use crate::auth::tokens_cache::TokensCache;
 use crate::auth::Username;
 use crate::file_server;
-use crate::models::{
+use crate::openapi_models::{
     AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
     GetStartingEndpointsResponse, RequestUploadUrlRequestBody, RequestUploadUrlResponse,
     RetrieveListOfUserFilesResponse, RetrieveListOfUserFilesResponseContentItemContent,

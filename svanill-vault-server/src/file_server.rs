@@ -1,4 +1,4 @@
-use crate::models::RetrieveListOfUserFilesResponseContentItemContent;
+use crate::openapi_models::RetrieveListOfUserFilesResponseContentItemContent;
 use crate::rusoto_extra::PostPolicy;
 use chrono::Utc;
 use futures::future::try_join_all;
