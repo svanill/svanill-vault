@@ -171,3 +171,13 @@ impl FileServer {
 fn build_object_key(username: &str, filename: &str) -> String {
     format!("users/{}/{}", username, filename)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::build_object_key;
+
+    #[test]
+    fn can_format_an_object_key() {
+        assert_eq!("users/foo/bar", build_object_key("foo", "bar"));
+    }
+}
