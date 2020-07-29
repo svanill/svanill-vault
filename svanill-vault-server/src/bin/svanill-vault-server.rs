@@ -164,7 +164,8 @@ async fn main() -> Result<()> {
                     .wrap(auth)
                     .service(vault_http::handlers::new_user)
                     .service(vault_http::handlers::request_upload_url)
-                    .service(vault_http::handlers::list_user_files),
+                    .service(vault_http::handlers::list_user_files)
+                    .service(vault_http::handlers::remove_file),
             )
             .default_service(
                 // 404 for GET request

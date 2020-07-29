@@ -4,11 +4,12 @@ use crate::auth::Username;
 use crate::file_server;
 use crate::openapi_models::{
     AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
-    GetStartingEndpointsResponse, RequestUploadUrlRequestBody, RequestUploadUrlResponse,
-    RetrieveListOfUserFilesResponse, RetrieveListOfUserFilesResponseContentItemContent,
+    GetStartingEndpointsResponse, RemoveFileResponse, RequestUploadUrlRequestBody,
+    RequestUploadUrlResponse, RetrieveListOfUserFilesResponse,
+    RetrieveListOfUserFilesResponseContentItemContent,
 };
 use crate::{db, errors::VaultError};
-use actix_web::{get, http, post, web, Error, HttpRequest, HttpResponse};
+use actix_web::{delete, get, http, post, web, Error, HttpRequest, HttpResponse};
 use anyhow::Result;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
@@ -182,13 +183,46 @@ pub async fn list_user_files(
                 json!({
                     "content": f,
                     "links": {
-                        "delete": hateoas_file_delete(f),
+                        "delete": hateoas_file_delete(&req, &f.filename),
                         "read": hateoas_file_read(f),
                     },
                     "status":200
                 })
             }).collect::<Vec<serde_json::value::Value>>(),
             "status":200,
+        }))
+        .unwrap(),
+    ))
+}
+
+#[derive(Deserialize)]
+pub struct RemoveFileQueryFields {
+    // XXX this is optional, but it shouldn't be. Maybe make it part of the URI?
+    filename: Option<String>,
+}
+
+#[delete("/files/")]
+pub async fn remove_file(
+    req: HttpRequest,
+    s3_fs: web::Data<Arc<file_server::FileServer>>,
+    q: web::Query<RemoveFileQueryFields>,
+) -> Result<HttpResponse, Error> {
+    if q.filename.is_none() {
+        return Err(VaultError::FieldRequired {
+            field: "username".into(),
+        }
+        .into());
+    };
+
+    let exts = req.extensions();
+    let username = &exts.get::<Username>().unwrap().0;
+    let key = format!("users/{}/{}", username, q.filename.as_ref().unwrap());
+
+    s3_fs.remove_file(&key).await.map_err(VaultError::S3Error)?;
+
+    Ok(HttpResponse::Ok().json(
+        serde_json::from_value::<RemoveFileResponse>(json!({
+            "status": 200,
         }))
         .unwrap(),
     ))
@@ -241,11 +275,10 @@ fn hateoas_file_read(f: &RetrieveListOfUserFilesResponseContentItemContent) -> s
     })
 }
 
-fn hateoas_file_delete(
-    _f: &RetrieveListOfUserFilesResponseContentItemContent,
-) -> serde_json::Value {
+fn hateoas_file_delete(req: &HttpRequest, filename: &str) -> serde_json::Value {
+    let url = req.url_for_static("remove_file").unwrap();
     json!({
-        "href": "unimplemented",
+        "href": format!("{}?filename={}", url.as_str(), filename),
         "rel": "file"
     })
 }

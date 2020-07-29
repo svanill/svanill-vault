@@ -7,8 +7,8 @@ use rusoto_core::{HttpClient, Region, RusotoError};
 use rusoto_credential::{AwsCredentials, ChainProvider, CredentialsError, ProvideAwsCredentials};
 use rusoto_s3::util::{PreSignedRequest, PreSignedRequestOption};
 use rusoto_s3::{
-    GetObjectRequest, HeadObjectError, HeadObjectRequest, ListObjectsV2Error, ListObjectsV2Request,
-    S3Client, S3,
+    DeleteObjectError, DeleteObjectRequest, GetObjectRequest, HeadObjectError, HeadObjectRequest,
+    ListObjectsV2Error, ListObjectsV2Request, S3Client, S3,
 };
 use std::default::Default;
 use std::{collections::HashMap, ops::Add};
@@ -26,6 +26,8 @@ pub enum FileServerError {
     TlsError(#[from] TlsError),
     #[error("failed to obtain S3 credentials")]
     CredentialsError(#[from] CredentialsError),
+    #[error("cannot delete file")]
+    CannotDelete(#[from] RusotoError<DeleteObjectError>),
 }
 
 pub struct FileServer {
@@ -107,6 +109,17 @@ impl FileServer {
         .await?;
 
         Ok(files)
+    }
+
+    pub async fn remove_file(&self, key: &str) -> Result<(), FileServerError> {
+        let delete_req = DeleteObjectRequest {
+            bucket: self.bucket.clone(),
+            key: key.to_string(),
+            ..Default::default()
+        };
+
+        self.client.delete_object(delete_req).await?;
+        Ok(())
     }
 
     pub fn get_presigned_retrieve_url(&self, key: String) -> String {
