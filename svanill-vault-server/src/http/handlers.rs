@@ -136,13 +136,18 @@ pub async fn new_user() -> Result<HttpResponse, Error> {
 
 #[post("/files/request-upload-url")]
 pub async fn request_upload_url(
+    req: HttpRequest,
     payload: web::Json<RequestUploadUrlRequestBody>,
     s3_fs: web::Data<Arc<file_server::FileServer>>,
 ) -> Result<HttpResponse, Error> {
     let filename = &payload.filename;
 
+    let exts = req.extensions();
+    let username = &exts.get::<Username>().unwrap().0;
+    let key = format!("users/{}/{}", username, filename);
+
     let (upload_url, retrieve_url, form_data) = s3_fs
-        .get_post_policy_data(&filename)
+        .get_post_policy_data(&key)
         .map_err(VaultError::UnexpectedError)?;
 
     Ok(HttpResponse::Ok().json(
