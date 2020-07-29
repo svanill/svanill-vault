@@ -155,6 +155,13 @@ fn main() -> Result<()> {
         conf_updated = true;
     }
 
+    // If the base_url is localhost (with or without port)
+    // we prefix it with http:// to avoid "URL Scheme is not allowed"
+    // error from the reqwest library.
+    if conf.base_url.starts_with("localhost") {
+        conf.base_url = format!("http://{}", conf.base_url);
+    }
+
     let challenge = request_challenge(&conf)?;
 
     if opt.answer == None && conf.challenges.get(&challenge) == None {
