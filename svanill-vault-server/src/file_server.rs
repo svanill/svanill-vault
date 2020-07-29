@@ -111,7 +111,9 @@ impl FileServer {
         Ok(files)
     }
 
-    pub async fn remove_file(&self, key: &str) -> Result<(), FileServerError> {
+    pub async fn remove_file(&self, username: &str, filename: &str) -> Result<(), FileServerError> {
+        let key = build_object_key(username, filename);
+
         let delete_req = DeleteObjectRequest {
             bucket: self.bucket.clone(),
             key: key.to_string(),
@@ -139,10 +141,13 @@ impl FileServer {
 
     pub fn get_post_policy_data(
         &self,
+        username: &str,
         filename: &str,
     ) -> Result<(String, String, HashMap<String, String>), String> {
         let bytes_range_min = 10;
         let bytes_range_max = 1_048_576;
+
+        let key = build_object_key(username, filename);
 
         let expiration_date = Utc::now()
             .add(chrono::Duration::from_std(self.presigned_url_timeout).expect("time overflow"));
@@ -152,13 +157,17 @@ impl FileServer {
             .set_region(&self.region)
             .set_access_key_id(&self.credentials.aws_access_key_id())
             .set_secret_access_key(&self.credentials.aws_secret_access_key())
-            .set_key(&filename)
+            .set_key(&key)
             .set_content_length_range(bytes_range_min, bytes_range_max)
             .set_expiration(expiration_date)
             .build_form_data()?;
 
-        let retrieve_url = self.get_presigned_retrieve_url(filename.to_string());
+        let retrieve_url = self.get_presigned_retrieve_url(key);
 
         Ok((upload_url, retrieve_url, form_data))
     }
+}
+
+fn build_object_key(username: &str, filename: &str) -> String {
+    format!("users/{}/{}", username, filename)
 }

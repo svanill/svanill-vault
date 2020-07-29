@@ -144,10 +144,9 @@ pub async fn request_upload_url(
 
     let exts = req.extensions();
     let username = &exts.get::<Username>().unwrap().0;
-    let key = format!("users/{}/{}", username, filename);
 
     let (upload_url, retrieve_url, form_data) = s3_fs
-        .get_post_policy_data(&key)
+        .get_post_policy_data(username, filename)
         .map_err(VaultError::UnexpectedError)?;
 
     Ok(HttpResponse::Ok().json(
@@ -221,9 +220,11 @@ pub async fn remove_file(
 
     let exts = req.extensions();
     let username = &exts.get::<Username>().unwrap().0;
-    let key = format!("users/{}/{}", username, q.filename.as_ref().unwrap());
 
-    s3_fs.remove_file(&key).await.map_err(VaultError::S3Error)?;
+    s3_fs
+        .remove_file(&username, q.filename.as_ref().unwrap())
+        .await
+        .map_err(VaultError::S3Error)?;
 
     Ok(HttpResponse::Ok().json(
         serde_json::from_value::<RemoveFileResponse>(json!({
