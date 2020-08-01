@@ -19,7 +19,20 @@ pub fn ls(
             serde_json::from_str(&content).ok();
 
         if let Some(entity) = opt_entity {
-            return Ok(entity.content.into_iter().map(|c| c.content).collect());
+            return Ok(entity
+                .content
+                .into_iter()
+                .map(|mut c| {
+                    c.content.filename = c
+                        .content
+                        .filename
+                        .trim_start_matches(&format!("users/{}/", &conf.username))
+                        .to_owned();
+                    c.content
+                })
+                // ignore keys containing `/` (not pushed by svanill-cli)
+                .filter(|c| !c.filename.contains('/'))
+                .collect());
         }
     };
 

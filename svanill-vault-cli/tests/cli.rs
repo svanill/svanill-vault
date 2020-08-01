@@ -50,19 +50,20 @@ fn it_exit_with_error_if_the_user_does_not_exist() {
 #[test]
 fn it_list_remote_files() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
+    let username = "test_user";
 
     let base_url = &mockito::server_url();
 
     let (m1, m2) = mock_successful_authentication_requests(&base_url);
 
-    let m3 = mock_list_files_happy_path(&base_url);
+    let m3 = mock_list_files_happy_path(&base_url, &username);
 
     let assert = cmd
         .args(&[
             "-h",
             base_url,
             "-u",
-            "test_user",
+            username,
             "--answer",
             "test answer",
             "ls",
@@ -117,11 +118,12 @@ fn it_delete_files() {
 #[test]
 fn it_pull_remote_file_output_to_stdout() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
+    let username = "test_user";
 
     let base_url = &mockito::server_url();
 
     let (m1, m2) = mock_successful_authentication_requests(&base_url);
-    let m3 = mock_list_files_happy_path(&base_url);
+    let m3 = mock_list_files_happy_path(&base_url, &username);
 
     let m4 = mock("GET", "/imaginary/url/this-is-a-test-file")
         .with_status(200)
@@ -134,7 +136,7 @@ fn it_pull_remote_file_output_to_stdout() {
             "-h",
             base_url,
             "-u",
-            "test_user",
+            username,
             "--answer",
             "test answer",
             "pull",
@@ -272,7 +274,7 @@ fn mock_successful_authentication_requests(base_url: &str) -> (mockito::Mock, mo
     (m1, m2)
 }
 
-fn mock_list_files_happy_path(base_url: &str) -> mockito::Mock {
+fn mock_list_files_happy_path(base_url: &str, username: &str) -> mockito::Mock {
     mock("GET", "/files/")
         .with_status(200)
         .with_header("content-type", "application/json")
@@ -282,7 +284,7 @@ fn mock_list_files_happy_path(base_url: &str) -> mockito::Mock {
                     {
                         "content":{
                             "checksum":"a9a1bdddeacc612db8b5c01a830af1c3",
-                            "filename":"this-is-a-test-file",
+                            "filename": format!("users/{}/this-is-a-test-file", username),
                             "size":123,
                             "url":format!("{}/imaginary/url/this-is-a-test-file", base_url),
                         },
