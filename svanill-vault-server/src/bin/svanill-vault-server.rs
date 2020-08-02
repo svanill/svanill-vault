@@ -1,6 +1,5 @@
 use actix_web::middleware::Logger;
-use actix_web::{guard, http, web, App, Error, HttpServer};
-use actix_web_httpauth::middleware::HttpAuthentication;
+use actix_web::{http, App, HttpServer};
 use anyhow::Result;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
@@ -10,10 +9,8 @@ use std::env;
 use std::sync::{Arc, RwLock};
 use structopt::StructOpt;
 use svanill_vault_server::auth::tokens_cache::TokensCache;
-use svanill_vault_server::errors::VaultError;
 use svanill_vault_server::file_server;
-use svanill_vault_server::http as vault_http;
-use svanill_vault_server::http::auth_middleware::auth_validator;
+use svanill_vault_server::http::handlers::config_handlers;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -68,16 +65,6 @@ struct Opt {
     presigned_url_duration_in_min: u32,
 }
 
-/// 404 handler
-async fn p404() -> Result<&'static str, Error> {
-    Err(VaultError::NotFound.into())
-}
-
-// Not allowed handler
-async fn method_not_allowed() -> Result<&'static str, Error> {
-    Err(VaultError::MethodNotAllowed.into())
-}
-
 #[actix_rt::main]
 async fn main() -> Result<()> {
     env::set_var(
@@ -130,9 +117,6 @@ async fn main() -> Result<()> {
     )));
 
     HttpServer::new(move || {
-        // Setup authentication middleware
-        let auth = HttpAuthentication::bearer(auth_validator);
-
         App::new()
             .data(pool.clone())
             .data(key.clone())
@@ -150,34 +134,7 @@ async fn main() -> Result<()> {
                     .max_age(86400)
                     .finish(),
             )
-            .service(vault_http::handlers::favicon)
-            .service(vault_http::handlers::index)
-            .service(vault_http::handlers::auth_user_request_challenge)
-            .service(
-                web::resource("/auth/answer-challenge")
-                    .route(web::post().to(vault_http::handlers::auth_user_answer_challenge))
-                    .name("auth_user_answer_challenge")
-                    .data(web::JsonConfig::default().limit(512)),
-            )
-            .service(
-                web::scope("")
-                    .wrap(auth)
-                    .service(vault_http::handlers::new_user)
-                    .service(vault_http::handlers::request_upload_url)
-                    .service(vault_http::handlers::list_user_files)
-                    .service(vault_http::handlers::remove_file),
-            )
-            .default_service(
-                // 404 for GET request
-                web::resource("")
-                    .route(web::get().to(p404))
-                    // all requests that are not `GET`
-                    .route(
-                        web::route()
-                            .guard(guard::Not(guard::Get()))
-                            .to(method_not_allowed),
-                    ),
-            )
+            .configure(config_handlers)
     })
     .bind((opt.host, opt.port))?
     .run()

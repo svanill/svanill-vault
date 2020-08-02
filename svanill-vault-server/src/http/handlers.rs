@@ -1,3 +1,5 @@
+use super::auth_middleware::auth_validator;
+use super::handlers;
 use crate::auth::auth_token::AuthToken;
 use crate::auth::tokens_cache::TokensCache;
 use crate::auth::Username;
@@ -9,7 +11,8 @@ use crate::openapi_models::{
     RetrieveListOfUserFilesResponseContentItemContent,
 };
 use crate::{db, errors::VaultError};
-use actix_web::{delete, get, http, post, web, Error, HttpRequest, HttpResponse};
+use actix_web::{delete, get, guard, http, post, web, Error, HttpRequest, HttpResponse};
+use actix_web_httpauth::middleware::HttpAuthentication;
 use anyhow::Result;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
@@ -20,7 +23,7 @@ use std::sync::{Arc, RwLock};
 type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
 
 #[get("/")]
-pub async fn index(req: HttpRequest) -> HttpResponse {
+async fn index(req: HttpRequest) -> HttpResponse {
     HttpResponse::Ok().json(
         serde_json::from_value::<GetStartingEndpointsResponse>(json!({
             "status": 200,
@@ -34,7 +37,7 @@ pub async fn index(req: HttpRequest) -> HttpResponse {
 }
 
 #[get("/favicon.ico")]
-pub async fn favicon() -> HttpResponse {
+async fn favicon() -> HttpResponse {
     HttpResponse::Ok()
         .header(http::header::CONTENT_TYPE, "image/svg+xml")
         .body(include_str!("../../favicon.svg"))
@@ -47,7 +50,7 @@ pub struct AuthRequestChallengeQueryFields {
 }
 
 #[get("/auth/request-challenge")]
-pub async fn auth_user_request_challenge(
+async fn auth_user_request_challenge(
     req: HttpRequest,
     pool: web::Data<DbPool>,
     q: web::Query<AuthRequestChallengeQueryFields>,
@@ -84,7 +87,7 @@ pub async fn auth_user_request_challenge(
     }
 }
 
-pub async fn auth_user_answer_challenge(
+async fn auth_user_answer_challenge(
     req: HttpRequest,
     payload: web::Json<AnswerUserChallengeRequest>,
     pool: web::Data<DbPool>,
@@ -130,12 +133,12 @@ pub async fn auth_user_answer_challenge(
 }
 
 #[get("/users/")]
-pub async fn new_user() -> Result<HttpResponse, Error> {
+async fn new_user() -> Result<HttpResponse, Error> {
     unimplemented!()
 }
 
 #[post("/files/request-upload-url")]
-pub async fn request_upload_url(
+async fn request_upload_url(
     req: HttpRequest,
     payload: web::Json<RequestUploadUrlRequestBody>,
     s3_fs: web::Data<Arc<file_server::FileServer>>,
@@ -169,7 +172,7 @@ pub async fn request_upload_url(
 }
 
 #[get("/files/")]
-pub async fn list_user_files(
+async fn list_user_files(
     req: HttpRequest,
     s3_fs: web::Data<Arc<file_server::FileServer>>,
 ) -> Result<HttpResponse, Error> {
@@ -206,7 +209,7 @@ pub struct RemoveFileQueryFields {
 }
 
 #[delete("/files/")]
-pub async fn remove_file(
+async fn remove_file(
     req: HttpRequest,
     s3_fs: web::Data<Arc<file_server::FileServer>>,
     q: web::Query<RemoveFileQueryFields>,
@@ -287,4 +290,50 @@ fn hateoas_file_delete(req: &HttpRequest, filename: &str) -> serde_json::Value {
         "href": format!("{}?filename={}", url.as_str(), filename),
         "rel": "file"
     })
+}
+
+/// 404 handler
+async fn p404() -> Result<&'static str, Error> {
+    Err(VaultError::NotFound.into())
+}
+
+/// Not allowed handler
+async fn method_not_allowed() -> Result<&'static str, Error> {
+    Err(VaultError::MethodNotAllowed.into())
+}
+
+pub fn config_handlers(cfg: &mut web::ServiceConfig) {
+    // Setup authentication middleware
+    let auth = HttpAuthentication::bearer(auth_validator);
+
+    cfg.service(handlers::favicon)
+        .service(handlers::index)
+        .service(handlers::auth_user_request_challenge)
+        .service(
+            web::resource("/auth/answer-challenge")
+                .route(web::post().to(handlers::auth_user_answer_challenge))
+                .name("auth_user_answer_challenge")
+                .data(web::JsonConfig::default().limit(512)),
+        )
+        .service(
+            web::scope("")
+                .wrap(auth)
+                .service(handlers::new_user)
+                .service(handlers::request_upload_url)
+                .service(handlers::list_user_files)
+                .service(handlers::remove_file),
+        )
+        .service(
+            web::scope("").service(
+                // 404 for GET request
+                web::resource("")
+                    .route(web::get().to(handlers::p404))
+                    // all requests that are not `GET`
+                    .route(
+                        web::route()
+                            .guard(guard::Not(guard::Get()))
+                            .to(handlers::method_not_allowed),
+                    ),
+            ),
+        );
 }
