@@ -28,3 +28,9 @@ impl TokensCache {
         None
     }
 }
+
+impl Default for TokensCache {
+    fn default() -> Self {
+        TokensCache::new(1, Duration::from_secs(1))
+    }
+}
