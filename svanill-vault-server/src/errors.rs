@@ -1,7 +1,8 @@
 use crate::file_server::FileServerError;
 use actix_http::ResponseBuilder;
 use actix_web::{error, http::header, http::StatusCode, HttpResponse};
-use serde::ser::Serializer;
+use serde::Deserializer;
+use serde::{ser::Serializer, Deserialize};
 use std::fmt::{self, Display};
 use thiserror::Error;
 
@@ -12,17 +13,29 @@ where
     s.serialize_u16(x.as_u16())
 }
 
-#[derive(Debug, Serialize)]
-pub struct ApiError {
-    error: ApiErrorDetail,
-    #[serde(rename = "status", serialize_with = "statuscode_to_u16")]
-    http_status: StatusCode,
+pub fn u16_to_statuscode<'de, D>(deserializer: D) -> Result<StatusCode, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let v = u16::deserialize(deserializer)?;
+    StatusCode::from_u16(v).map_err(serde::de::Error::custom)
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ApiError {
+    pub error: ApiErrorDetail,
+    #[serde(
+        rename = "status",
+        serialize_with = "statuscode_to_u16",
+        deserialize_with = "u16_to_statuscode"
+    )]
+    pub http_status: StatusCode,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 pub struct ApiErrorDetail {
-    code: u32,
-    message: String,
+    pub code: u32,
+    pub message: String,
 }
 
 impl Display for ApiError {
