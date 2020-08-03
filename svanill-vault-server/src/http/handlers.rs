@@ -321,19 +321,17 @@ pub fn config_handlers(cfg: &mut web::ServiceConfig) {
                 .service(handlers::new_user)
                 .service(handlers::request_upload_url)
                 .service(handlers::list_user_files)
-                .service(handlers::remove_file),
-        )
-        .service(
-            web::scope("").service(
-                // 404 for GET request
-                web::resource("")
-                    .route(web::get().to(handlers::p404))
-                    // all requests that are not `GET`
-                    .route(
-                        web::route()
-                            .guard(guard::Not(guard::Get()))
-                            .to(handlers::method_not_allowed),
-                    ),
-            ),
+                .service(handlers::remove_file)
+                .default_service(
+                    // 404 for GET request
+                    web::resource("/a/b")
+                        .route(web::get().to(handlers::p404))
+                        // all requests that are not `GET`
+                        .route(
+                            web::route()
+                                .guard(guard::Not(guard::Get()))
+                                .to(handlers::method_not_allowed),
+                        ),
+                ),
         );
 }
