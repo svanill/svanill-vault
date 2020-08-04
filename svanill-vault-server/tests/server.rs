@@ -1,9 +1,14 @@
-#[cfg(test)]
 use actix_web::{test, App};
+use ctor::ctor;
 use svanill_vault_server::auth::tokens_cache::TokensCache;
 use svanill_vault_server::errors::ApiError;
 use svanill_vault_server::http::handlers::config_handlers;
 
+#[cfg(test)]
+#[ctor]
+fn init_color_backtrace() {
+    color_backtrace::install();
+}
 #[actix_rt::test]
 async fn test_not_found() {
     let tokens_cache = TokensCache::default();

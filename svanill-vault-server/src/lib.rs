@@ -9,3 +9,9 @@ pub mod file_server;
 pub mod http;
 pub mod openapi_models;
 mod rusoto_extra;
+
+#[cfg(test)]
+extern crate ctor;
+
+#[cfg(test)]
+extern crate color_backtrace;

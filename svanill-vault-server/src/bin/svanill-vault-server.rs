@@ -67,6 +67,9 @@ struct Opt {
 
 #[actix_rt::main]
 async fn main() -> Result<()> {
+    #[cfg(debug_assertions)]
+    color_backtrace::install();
+
     env::set_var(
         "RUST_LOG",
         "info,rusoto=warn,actix_http=debug,actix_web=debug,actix_server=info",
