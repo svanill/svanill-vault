@@ -1,10 +1,10 @@
 use crate::auth::auth_token::AuthToken;
 use crate::auth::tokens_cache::TokensCache;
 use crate::auth::Username;
+use crate::errors::ApiError;
 use actix_http::HttpMessage;
-use actix_web::{dev::ServiceRequest, web, Error};
-use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
-use actix_web_httpauth::extractors::AuthenticationError;
+use actix_web::{dev::ServiceRequest, http::StatusCode, web, Error};
+use actix_web_httpauth::extractors::bearer::BearerAuth;
 use anyhow::Result;
 use std::sync::{Arc, RwLock};
 
@@ -24,19 +24,17 @@ pub async fn auth_validator(
     req: ServiceRequest,
     credentials: BearerAuth,
 ) -> Result<ServiceRequest, Error> {
-    let config = req
-        .app_data::<Config>()
-        .map(|data| data.get_ref().clone())
-        .unwrap_or_else(Default::default);
-
     let maybe_tokens_cache = req.app_data::<Arc<RwLock<TokensCache>>>();
-    let tokens_cache = maybe_tokens_cache.unwrap(); // PANIC on missing tokens cache
+    let tokens_cache =
+        maybe_tokens_cache.expect("the tokens_cache have not been setup to this route");
 
     match validate_token(tokens_cache, AuthToken(credentials.token().to_owned())) {
         Some(user) => {
             req.extensions_mut().insert(user);
             Ok(req)
         }
-        None => Err(AuthenticationError::from(config).into()),
+        None => {
+            Err(ApiError::new(StatusCode::UNAUTHORIZED, 401, "Unhauthorized".to_owned()).into())
+        }
     }
 }

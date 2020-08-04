@@ -45,7 +45,7 @@ impl Display for ApiError {
 }
 
 impl ApiError {
-    fn new(http_status: StatusCode, code: u32, message: String) -> Self {
+    pub fn new(http_status: StatusCode, code: u32, message: String) -> Self {
         ApiError {
             http_status,
             error: ApiErrorDetail { code, message },
