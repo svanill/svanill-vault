@@ -5,6 +5,7 @@ use svanill_vault_server::auth::auth_token::AuthToken;
 use svanill_vault_server::auth::tokens_cache::TokensCache;
 use svanill_vault_server::errors::ApiError;
 use svanill_vault_server::http::handlers::config_handlers;
+use svanill_vault_server::openapi_models::GetStartingEndpointsResponse;
 
 #[cfg(test)]
 #[ctor]
@@ -69,4 +70,15 @@ async fn auth_noroute_get_must_return_404() {
 
     assert_eq!(404, resp.http_status);
     assert_eq!(404, resp.error.code);
+}
+
+#[actix_rt::test]
+async fn root() {
+    let mut app = test::init_service(App::new().configure(config_handlers)).await;
+
+    let req = test::TestRequest::get().uri("/").to_request();
+
+    let resp: GetStartingEndpointsResponse = test::read_response_json(&mut app, req).await;
+
+    assert_eq!(200, resp.status);
 }
