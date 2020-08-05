@@ -12,6 +12,9 @@ use svanill_vault_server::auth::tokens_cache::TokensCache;
 use svanill_vault_server::file_server;
 use svanill_vault_server::http::handlers::config_handlers;
 
+#[macro_use]
+extern crate diesel_migrations;
+
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "svanill-vault-cli",
@@ -106,6 +109,11 @@ async fn main() -> Result<()> {
     let pool = r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create database connection pool");
+
+    embed_migrations!();
+    let connection = pool.get().expect("couldn't get db connection from pool");
+
+    embedded_migrations::run(&connection).expect("failed to run migrations");
 
     // generate server key, used to sign and verify tokens
     let rng = rand::SystemRandom::new();
