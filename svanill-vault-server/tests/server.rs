@@ -2,7 +2,7 @@ use actix_web::{http::Method, test, App};
 use ctor::ctor;
 use diesel::{
     r2d2::{self, ConnectionManager},
-    SqliteConnection,
+    RunQueryDsl, SqliteConnection,
 };
 use r2d2::Pool;
 use std::sync::{Arc, RwLock};
@@ -10,7 +10,9 @@ use svanill_vault_server::auth::auth_token::AuthToken;
 use svanill_vault_server::auth::tokens_cache::TokensCache;
 use svanill_vault_server::errors::ApiError;
 use svanill_vault_server::http::handlers::config_handlers;
-use svanill_vault_server::openapi_models::GetStartingEndpointsResponse;
+use svanill_vault_server::openapi_models::{
+    AskForTheChallengeResponse, GetStartingEndpointsResponse,
+};
 
 #[macro_use]
 extern crate diesel_migrations;
@@ -105,6 +107,26 @@ fn setup_test_db() -> Pool<ConnectionManager<SqliteConnection>> {
     pool
 }
 
+fn setup_test_db_with_user() -> Pool<ConnectionManager<SqliteConnection>> {
+    let pool = setup_test_db();
+
+    let connection = pool.get().expect("couldn't get db connection from pool");
+
+    let query = diesel::sql_query(
+        r#"
+        INSERT INTO user VALUES
+        ('test_user_1', 'challenge1', 'answer1'),
+        ('test_user_2', 'challenge2', 'answer2')
+    "#,
+    );
+
+    query
+        .execute(&connection)
+        .expect("failed to insert db test values");
+
+    pool
+}
+
 #[actix_rt::test]
 async fn get_auth_challenge_no_username_provided() {
     let pool = setup_test_db();
@@ -137,4 +159,21 @@ async fn get_auth_challenge_username_not_found() {
 
     assert_eq!(401, resp.http_status);
     assert_eq!(1005, resp.error.code);
+}
+
+#[actix_rt::test]
+async fn get_auth_challenge_ok() {
+    let pool = setup_test_db_with_user();
+
+    let mut app =
+        test::init_service(App::new().data(pool.clone()).configure(config_handlers)).await;
+
+    let req = test::TestRequest::get()
+        .uri("/auth/request-challenge?username=test_user_2")
+        .to_request();
+
+    let resp: AskForTheChallengeResponse = test::read_response_json(&mut app, req).await;
+
+    assert_eq!(200, resp.status);
+    assert_eq!("challenge2", resp.content.challenge);
 }
