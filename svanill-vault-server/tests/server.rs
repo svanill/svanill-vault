@@ -121,3 +121,20 @@ async fn get_auth_challenge_no_username_provided() {
     assert_eq!(409, resp.http_status);
     assert_eq!(1002, resp.error.code);
 }
+
+#[actix_rt::test]
+async fn get_auth_challenge_username_not_found() {
+    let pool = setup_test_db();
+
+    let mut app =
+        test::init_service(App::new().data(pool.clone()).configure(config_handlers)).await;
+
+    let req = test::TestRequest::get()
+        .uri("/auth/request-challenge?username=notfound")
+        .to_request();
+
+    let resp: ApiError = test::read_response_json(&mut app, req).await;
+
+    assert_eq!(401, resp.http_status);
+    assert_eq!(1005, resp.error.code);
+}
