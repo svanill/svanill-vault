@@ -1,17 +1,20 @@
-use actix_web::{http::Method, test, App};
+use actix_web::{dev::Service, http::Method, test, App};
 use ctor::ctor;
 use diesel::{
     r2d2::{self, ConnectionManager},
     RunQueryDsl, SqliteConnection,
 };
 use r2d2::Pool;
+use ring::hmac;
+use ring::test::rand::FixedByteRandom;
 use std::sync::{Arc, RwLock};
 use svanill_vault_server::auth::auth_token::AuthToken;
 use svanill_vault_server::auth::tokens_cache::TokensCache;
 use svanill_vault_server::errors::ApiError;
 use svanill_vault_server::http::handlers::config_handlers;
 use svanill_vault_server::openapi_models::{
-    AskForTheChallengeResponse, GetStartingEndpointsResponse,
+    AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
+    GetStartingEndpointsResponse,
 };
 
 #[macro_use]
@@ -28,6 +31,13 @@ fn prepare_tokens_cache(token: &str, username: &str) -> Arc<RwLock<TokensCache>>
     let mut tokens_cache = TokensCache::default();
     tokens_cache.insert(AuthToken(token.to_string()), username.to_string());
     Arc::new(RwLock::new(tokens_cache))
+}
+
+fn setup_fake_random_key() -> std::sync::Arc<hmac::Key> {
+    let rng = FixedByteRandom { byte: 0 };
+    std::sync::Arc::new(
+        hmac::Key::generate(hmac::HMAC_SHA256, &rng).expect("Cannot generate cryptographyc key"),
+    )
 }
 
 #[actix_rt::test]
@@ -176,4 +186,61 @@ async fn get_auth_challenge_ok() {
 
     assert_eq!(200, resp.status);
     assert_eq!("challenge2", resp.content.challenge);
+}
+
+#[actix_rt::test]
+async fn answer_auth_challenge_ok() {
+    let pool = setup_test_db_with_user();
+    let tokens_cache: Arc<RwLock<TokensCache>> = Arc::new(RwLock::new(TokensCache::default()));
+    let random_key = setup_fake_random_key();
+
+    let mut app = test::init_service(
+        App::new()
+            .data(pool)
+            .data(tokens_cache)
+            .data(random_key)
+            .configure(config_handlers),
+    )
+    .await;
+
+    let payload = AnswerUserChallengeRequest {
+        username: "test_user_2".to_owned(),
+        answer: "answer2".to_owned(),
+    };
+
+    let req = test::TestRequest::post()
+        .uri("/auth/answer-challenge")
+        .set_json(&payload)
+        .to_request();
+
+    let resp = app.call(req).await.expect("failed to make the request");
+
+    let body = test::read_body(resp).await;
+    let json_resp: AnswerUserChallengeResponse = to_json_response(&body).unwrap();
+
+    assert_eq!(200, json_resp.status);
+    assert!(!json_resp.content.token.is_empty());
+}
+
+fn to_json_response<T>(body: &[u8]) -> Result<T, String>
+where
+    T: serde::de::DeserializeOwned,
+{
+    if body.is_empty() {
+        return Err(String::from("Response body is empty"));
+    }
+
+    serde_json::from_slice::<T>(&body).map_err(|_| {
+        // failed to deserialize. Was perhaps an ApiError?
+        let res = serde_json::from_slice::<ApiError>(&body);
+
+        if let Ok(api_error) = res {
+            serde_json::to_string(&api_error).unwrap()
+        } else {
+            format!(
+                "Response body does not match expected JSON format. Got: {}",
+                std::str::from_utf8(&body).unwrap()
+            )
+        }
+    })
 }
