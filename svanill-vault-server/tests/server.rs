@@ -367,6 +367,45 @@ async fn request_upload_url_ok() {
     assert!(!json_resp.links.retrieve_url.href.is_empty());
 }
 
+#[actix_rt::test]
+async fn request_upload_url_empty_filename() {
+    let pool = setup_test_db_with_user();
+    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user_2");
+
+    let s3_resp_mock = MockRequestDispatcher::default().with_body("ciao");
+    let s3_fs = setup_s3_fs(s3_resp_mock).await;
+
+    let mut app = test::init_service(
+        App::new()
+            .data(pool)
+            .data(s3_fs)
+            .data(tokens_cache)
+            .configure(config_handlers),
+    )
+    .await;
+
+    let req_username = Username("test_user_2".to_owned());
+
+    let payload = RequestUploadUrlRequestBody {
+        filename: "".to_owned(),
+    };
+
+    let mut req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
+        .method(Method::POST)
+        .uri("/files/request-upload-url")
+        .set_json(&payload)
+        .to_request();
+
+    req.head_mut().extensions_mut().insert(req_username);
+
+    let resp = app.call(req).await.expect("failed to make the request");
+    let body = test::read_body(resp).await;
+    let json_resp: ApiError = to_json_response(&body).unwrap();
+
+    assert_eq!(409, json_resp.http_status);
+    assert_eq!(1002, json_resp.error.code);
+}
+
 /**
  * Convert json body to the expected format.
  *

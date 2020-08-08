@@ -145,6 +145,13 @@ async fn request_upload_url(
 ) -> Result<HttpResponse, Error> {
     let filename = &payload.filename;
 
+    if filename.is_empty() {
+        return Err(VaultError::FieldRequired {
+            field: "username".into(),
+        }
+        .into());
+    };
+
     let exts = req.extensions();
     let username = &exts.get::<Username>().unwrap().0;
 
