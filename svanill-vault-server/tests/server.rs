@@ -194,6 +194,68 @@ async fn get_auth_challenge_ok() {
 }
 
 #[actix_rt::test]
+async fn answer_auth_challenge_username_not_found() {
+    let pool = setup_test_db_with_user();
+    let tokens_cache: Arc<RwLock<TokensCache>> = Arc::new(RwLock::new(TokensCache::default()));
+    let random_key = setup_fake_random_key();
+
+    let mut app = test::init_service(
+        App::new()
+            .data(pool)
+            .data(tokens_cache)
+            .data(random_key)
+            .configure(config_handlers),
+    )
+    .await;
+
+    let payload = AnswerUserChallengeRequest {
+        username: "notfound".to_owned(),
+        answer: "any_answer".to_owned(),
+    };
+
+    let req = test::TestRequest::post()
+        .uri("/auth/answer-challenge")
+        .set_json(&payload)
+        .to_request();
+
+    let resp: ApiError = test::read_response_json(&mut app, req).await;
+
+    assert_eq!(401, resp.http_status);
+    assert_eq!(1005, resp.error.code);
+}
+
+#[actix_rt::test]
+async fn answer_auth_challenge_wrong_answer() {
+    let pool = setup_test_db_with_user();
+    let tokens_cache: Arc<RwLock<TokensCache>> = Arc::new(RwLock::new(TokensCache::default()));
+    let random_key = setup_fake_random_key();
+
+    let mut app = test::init_service(
+        App::new()
+            .data(pool)
+            .data(tokens_cache)
+            .data(random_key)
+            .configure(config_handlers),
+    )
+    .await;
+
+    let payload = AnswerUserChallengeRequest {
+        username: "test_user_2".to_owned(),
+        answer: "wrong_answer".to_owned(),
+    };
+
+    let req = test::TestRequest::post()
+        .uri("/auth/answer-challenge")
+        .set_json(&payload)
+        .to_request();
+
+    let resp: ApiError = test::read_response_json(&mut app, req).await;
+
+    assert_eq!(401, resp.http_status);
+    assert_eq!(1006, resp.error.code);
+}
+
+#[actix_rt::test]
 async fn answer_auth_challenge_ok() {
     let pool = setup_test_db_with_user();
     let tokens_cache: Arc<RwLock<TokensCache>> = Arc::new(RwLock::new(TokensCache::default()));
