@@ -182,10 +182,12 @@ async fn get_auth_challenge_ok() {
         .uri("/auth/request-challenge?username=test_user_2")
         .to_request();
 
-    let resp: AskForTheChallengeResponse = test::read_response_json(&mut app, req).await;
+    let resp = app.call(req).await.expect("failed to make the request");
+    let body = test::read_body(resp).await;
+    let json_resp: AskForTheChallengeResponse = to_json_response(&body).unwrap();
 
-    assert_eq!(200, resp.status);
-    assert_eq!("challenge2", resp.content.challenge);
+    assert_eq!(200, json_resp.status);
+    assert_eq!("challenge2", json_resp.content.challenge);
 }
 
 #[actix_rt::test]
