@@ -227,6 +227,13 @@ async fn answer_auth_challenge_ok() {
     assert!(!json_resp.content.token.is_empty());
 }
 
+/**
+ * Convert json body to the expected format.
+ *
+ * Contrary to test::read_response_json it provides
+ * a better error output if the handler returned a
+ * ApiError.
+ */
 fn to_json_response<T>(body: &[u8]) -> Result<T, String>
 where
     T: serde::de::DeserializeOwned,
