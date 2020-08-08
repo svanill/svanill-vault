@@ -281,12 +281,24 @@ async fn answer_auth_challenge_ok() {
         .to_request();
 
     let resp = app.call(req).await.expect("failed to make the request");
-
     let body = test::read_body(resp).await;
     let json_resp: AnswerUserChallengeResponse = to_json_response(&body).unwrap();
 
     assert_eq!(200, json_resp.status);
     assert!(!json_resp.content.token.is_empty());
+
+    // Do the same request again and verify that every token is unique
+    let req2 = test::TestRequest::post()
+        .uri("/auth/answer-challenge")
+        .set_json(&payload)
+        .to_request();
+
+    let resp2 = app.call(req2).await.expect("failed to make the request");
+    let body2 = test::read_body(resp2).await;
+    let json_resp2: AnswerUserChallengeResponse = to_json_response(&body2).unwrap();
+
+    assert_eq!(200, json_resp2.status);
+    assert_ne!(json_resp.content.token, json_resp2.content.token);
 }
 
 /**
