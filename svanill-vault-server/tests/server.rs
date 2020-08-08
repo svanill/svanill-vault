@@ -7,14 +7,20 @@ use diesel::{
 use r2d2::Pool;
 use ring::hmac;
 use ring::test::rand::FixedByteRandom;
+use rusoto_core::Region;
+use rusoto_credential::ProvideAwsCredentials;
+use rusoto_mock::{MockCredentialsProvider, MockRequestDispatcher};
 use std::sync::{Arc, RwLock};
 use svanill_vault_server::auth::auth_token::AuthToken;
-use svanill_vault_server::auth::tokens_cache::TokensCache;
+use svanill_vault_server::auth::{tokens_cache::TokensCache, Username};
 use svanill_vault_server::errors::ApiError;
 use svanill_vault_server::http::handlers::config_handlers;
-use svanill_vault_server::openapi_models::{
-    AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
-    GetStartingEndpointsResponse,
+use svanill_vault_server::{
+    file_server,
+    openapi_models::{
+        AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
+        GetStartingEndpointsResponse, RequestUploadUrlRequestBody, RequestUploadUrlResponse,
+    },
 };
 
 #[macro_use]
@@ -299,6 +305,66 @@ async fn answer_auth_challenge_ok() {
 
     assert_eq!(200, json_resp2.status);
     assert_ne!(json_resp.content.token, json_resp2.content.token);
+}
+
+async fn setup_s3_fs(s3_resp_mock: MockRequestDispatcher) -> Arc<file_server::FileServer> {
+    let region = Region::EuCentral1;
+    let bucket = "test_bucket".to_string();
+
+    let provider = MockCredentialsProvider;
+    let credentials = provider.credentials().await.unwrap();
+
+    let client = rusoto_s3::S3Client::new_with(s3_resp_mock, provider, Default::default());
+
+    let fileserver = file_server::FileServer {
+        region,
+        bucket,
+        client,
+        credentials,
+        presigned_url_timeout: std::time::Duration::from_secs(10),
+    };
+
+    Arc::new(fileserver)
+}
+
+#[actix_rt::test]
+async fn request_upload_url_ok() {
+    let pool = setup_test_db_with_user();
+    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user_2");
+
+    let s3_resp_mock = MockRequestDispatcher::default();
+    let s3_fs = setup_s3_fs(s3_resp_mock).await;
+
+    let mut app = test::init_service(
+        App::new()
+            .data(pool)
+            .data(s3_fs)
+            .data(tokens_cache)
+            .configure(config_handlers),
+    )
+    .await;
+
+    let payload = RequestUploadUrlRequestBody {
+        filename: "test_filename".to_owned(),
+    };
+
+    let req_username = Username("test_user_2".to_owned());
+
+    let mut req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
+        .method(Method::POST)
+        .uri("/files/request-upload-url")
+        .set_json(&payload)
+        .to_request();
+
+    req.head_mut().extensions_mut().insert(req_username);
+
+    let resp = app.call(req).await.expect("failed to make the request");
+    let body = test::read_body(resp).await;
+    let json_resp: RequestUploadUrlResponse = to_json_response(&body).unwrap();
+
+    assert_eq!(200, json_resp.status);
+    assert!(!json_resp.links.upload_url.href.is_empty());
+    assert!(!json_resp.links.retrieve_url.href.is_empty());
 }
 
 /**

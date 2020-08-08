@@ -41,3 +41,4 @@ diesel_migrations = "1.4.0"
 
 [dev-dependencies]
 ctor = "0.1.15"
+rusoto_mock = { version = "0.45.0", default-features = false, features = ["rustls"] }

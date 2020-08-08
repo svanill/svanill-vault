@@ -31,11 +31,11 @@ pub enum FileServerError {
 }
 
 pub struct FileServer {
-    region: Region,
-    bucket: String,
-    client: S3Client,
-    credentials: AwsCredentials,
-    presigned_url_timeout: std::time::Duration,
+    pub region: Region,
+    pub bucket: String,
+    pub client: S3Client,
+    pub credentials: AwsCredentials,
+    pub presigned_url_timeout: std::time::Duration,
 }
 
 impl FileServer {

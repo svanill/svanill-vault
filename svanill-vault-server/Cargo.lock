@@ -1895,6 +1895,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "rusoto_mock"
+version = "0.45.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ff14fcb9ae32511e705349da464e117bac945b541ec87283ad5dc93c1280250"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "futures",
+ "http",
+ "rusoto_core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "rusoto_s3"
 version = "0.45.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2328,6 +2343,7 @@ dependencies = [
  "ring",
  "rusoto_core",
  "rusoto_credential",
+ "rusoto_mock",
  "rusoto_s3",
  "rusoto_signature",
  "serde",
