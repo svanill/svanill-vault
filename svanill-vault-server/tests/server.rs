@@ -41,7 +41,6 @@ fn setup_fake_random_key() -> std::sync::Arc<hmac::Key> {
 }
 
 #[actix_rt::test]
-#[ignore]
 async fn noauth_noroute_must_return_401() {
     let tokens_cache: Arc<RwLock<TokensCache>> = Arc::new(RwLock::new(TokensCache::default()));
 
@@ -52,10 +51,14 @@ async fn noauth_noroute_must_return_401() {
         .uri("/not-exist")
         .to_request();
 
-    let resp: ApiError = test::read_response_json(&mut app, req).await;
+    let resp = app.call(req).await;
 
-    assert_eq!(401, resp.http_status);
-    assert_eq!(401, resp.error.code);
+    // app call fails because the auth middleware interrupts it early
+    let web_error = resp.err().unwrap();
+    let json_resp: &ApiError = web_error.as_error::<ApiError>().unwrap();
+
+    assert_eq!(401, json_resp.http_status);
+    assert_eq!(401, json_resp.error.code);
 }
 
 #[actix_rt::test]
