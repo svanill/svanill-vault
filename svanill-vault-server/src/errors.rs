@@ -70,6 +70,7 @@ pub enum VaultError {
     NotFound,
     MethodNotAllowed,
     FieldRequired { field: String },
+    GenericBadRequest(String),
     UserDoesNotExist,
     DatabaseError(#[from] diesel::result::Error),
     ChallengeMismatchError,
@@ -95,6 +96,9 @@ impl From<&VaultError> for ApiError {
                 1002,
                 format!("This field is required: {}", field),
             ),
+            VaultError::GenericBadRequest(msg) => {
+                ApiError::new(StatusCode::BAD_REQUEST, 1024, msg.to_owned())
+            }
             VaultError::UserDoesNotExist => ApiError::new(
                 StatusCode::UNAUTHORIZED,
                 1005,

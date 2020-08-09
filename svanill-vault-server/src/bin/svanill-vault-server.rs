@@ -1,4 +1,4 @@
-use actix_web::middleware::Logger;
+use actix_web::middleware::{errhandlers::ErrorHandlers, Logger};
 use actix_web::{http, App, HttpServer};
 use anyhow::Result;
 use diesel::prelude::*;
@@ -10,7 +10,7 @@ use std::sync::{Arc, RwLock};
 use structopt::StructOpt;
 use svanill_vault_server::auth::tokens_cache::TokensCache;
 use svanill_vault_server::file_server;
-use svanill_vault_server::http::handlers::config_handlers;
+use svanill_vault_server::http::handlers::{config_handlers, render_40x, render_500};
 
 #[macro_use]
 extern crate diesel_migrations;
@@ -133,6 +133,8 @@ async fn main() -> Result<()> {
             .data(key.clone())
             .data(tokens_cache.clone())
             .data(s3_fs.clone())
+            .wrap(ErrorHandlers::new().handler(http::StatusCode::INTERNAL_SERVER_ERROR, render_500))
+            .wrap(ErrorHandlers::new().handler(http::StatusCode::BAD_REQUEST, render_40x))
             .wrap(Logger::default())
             .wrap(
                 actix_cors::Cors::new()

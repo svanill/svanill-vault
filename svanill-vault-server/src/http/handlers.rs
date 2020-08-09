@@ -11,9 +11,13 @@ use crate::openapi_models::{
     RetrieveListOfUserFilesResponseContentItemContent,
 };
 use crate::{db, errors::VaultError};
-use actix_web::{delete, get, guard, http, post, web, Error, HttpRequest, HttpResponse};
+use actix_http::ResponseError;
+use actix_web::body::Body;
+use actix_web::{
+    delete, dev::ServiceResponse, get, guard, http, middleware::errhandlers::ErrorHandlerResponse,
+    post, web, Error, HttpRequest, HttpResponse,
+};
 use actix_web_httpauth::middleware::HttpAuthentication;
-use anyhow::Result;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use serde::Deserialize;
@@ -305,8 +309,53 @@ async fn p404() -> Result<&'static str, Error> {
 }
 
 /// Not allowed handler
-async fn method_not_allowed() -> Result<&'static str, Error> {
-    Err(VaultError::MethodNotAllowed.into())
+async fn method_not_allowed() -> Result<&'static str, VaultError> {
+    Err(VaultError::MethodNotAllowed)
+}
+
+pub fn render_500(mut res: ServiceResponse<Body>) -> actix_web::Result<ErrorHandlerResponse<Body>> {
+    let v_error = VaultError::UnexpectedError("".to_owned());
+    let resp = res.response_mut();
+    resp.headers_mut().insert(
+        http::header::CONTENT_TYPE,
+        http::HeaderValue::from_static("application/json"),
+    );
+
+    *resp.status_mut() = v_error.status_code();
+
+    Ok(ErrorHandlerResponse::Response(res.map_body(
+        |_head, _body| actix_web::dev::ResponseBody::Body(v_error.to_string().into()),
+    )))
+}
+
+pub fn render_40x(mut res: ServiceResponse<Body>) -> actix_web::Result<ErrorHandlerResponse<Body>> {
+    // Get the inner error : if it's a VaultError, keep the response
+    // as is, otherwise forge a new VaultError (it happens
+    // when actix exit early without reaching the handler,
+    // e.g. missing or wrong payload).
+    let ie = res.response().error().unwrap();
+
+    if ie.as_error::<VaultError>().is_some() {
+        Ok(ErrorHandlerResponse::Response(res))
+    } else {
+        let msg = res
+            .response()
+            .error()
+            .map(|x| x.to_string())
+            .unwrap_or_else(|| "Bad Request".to_string());
+        let v_error = VaultError::GenericBadRequest(msg);
+        let resp = res.response_mut();
+        resp.headers_mut().insert(
+            http::header::CONTENT_TYPE,
+            http::HeaderValue::from_static("application/json"),
+        );
+
+        *resp.status_mut() = v_error.status_code();
+
+        Ok(ErrorHandlerResponse::Response(res.map_body(
+            |_head, _body| actix_web::dev::ResponseBody::Body(v_error.to_string().into()),
+        )))
+    }
 }
 
 pub fn config_handlers(cfg: &mut web::ServiceConfig) {
