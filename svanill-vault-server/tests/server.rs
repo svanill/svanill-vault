@@ -1,4 +1,5 @@
-use actix_web::{dev::Service, http::Method, test, App};
+use actix_http::http::StatusCode;
+use actix_web::{dev::Service, http::Method, middleware::errhandlers::ErrorHandlers, test, App};
 use ctor::ctor;
 use diesel::{
     r2d2::{self, ConnectionManager},
@@ -14,7 +15,7 @@ use std::sync::{Arc, RwLock};
 use svanill_vault_server::auth::auth_token::AuthToken;
 use svanill_vault_server::auth::{tokens_cache::TokensCache, Username};
 use svanill_vault_server::errors::ApiError;
-use svanill_vault_server::http::handlers::config_handlers;
+use svanill_vault_server::http::handlers::{config_handlers, render_40x};
 use svanill_vault_server::{
     file_server,
     openapi_models::{
@@ -399,6 +400,47 @@ async fn request_upload_url_empty_filename() {
 
     assert_eq!(409, json_resp.http_status);
     assert_eq!(1002, json_resp.error.code);
+}
+
+#[actix_rt::test]
+async fn request_upload_url_wrong_payload() {
+    let pool = setup_test_db_with_user();
+    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user_2");
+
+    let s3_resp_mock = MockRequestDispatcher::default().with_body("ciao");
+    let s3_fs = setup_s3_fs(s3_resp_mock).await;
+
+    let mut app = test::init_service(
+        App::new()
+            .wrap(ErrorHandlers::new().handler(StatusCode::BAD_REQUEST, render_40x))
+            .data(pool)
+            .data(s3_fs)
+            .data(tokens_cache)
+            .configure(config_handlers),
+    )
+    .await;
+
+    let req_username = Username("test_user_2".to_owned());
+
+    let payload = "not a proper payload".to_string();
+
+    let mut req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
+        .method(Method::POST)
+        .uri("/files/request-upload-url")
+        .set_json(&payload)
+        .to_request();
+
+    req.head_mut().extensions_mut().insert(req_username);
+
+    let resp = app.call(req).await.expect("failed to make the request");
+    let json_resp: ApiError = to_json_response(resp).await.unwrap();
+
+    assert_eq!(400, json_resp.http_status);
+    assert_eq!(1024, json_resp.error.code);
+    assert!(json_resp
+        .error
+        .message
+        .contains("expected struct RequestUploadUrlRequestBody"));
 }
 
 /**
