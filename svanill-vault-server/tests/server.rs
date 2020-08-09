@@ -192,8 +192,7 @@ async fn get_auth_challenge_ok() {
         .to_request();
 
     let resp = app.call(req).await.expect("failed to make the request");
-    let body = test::read_body(resp).await;
-    let json_resp: AskForTheChallengeResponse = to_json_response(&body).unwrap();
+    let json_resp: AskForTheChallengeResponse = to_json_response(resp).await.unwrap();
 
     assert_eq!(200, json_resp.status);
     assert_eq!("challenge2", json_resp.content.challenge);
@@ -287,8 +286,7 @@ async fn answer_auth_challenge_ok() {
         .to_request();
 
     let resp = app.call(req).await.expect("failed to make the request");
-    let body = test::read_body(resp).await;
-    let json_resp: AnswerUserChallengeResponse = to_json_response(&body).unwrap();
+    let json_resp: AnswerUserChallengeResponse = to_json_response(resp).await.unwrap();
 
     assert_eq!(200, json_resp.status);
     assert!(!json_resp.content.token.is_empty());
@@ -300,8 +298,7 @@ async fn answer_auth_challenge_ok() {
         .to_request();
 
     let resp2 = app.call(req2).await.expect("failed to make the request");
-    let body2 = test::read_body(resp2).await;
-    let json_resp2: AnswerUserChallengeResponse = to_json_response(&body2).unwrap();
+    let json_resp2: AnswerUserChallengeResponse = to_json_response(resp2).await.unwrap();
 
     assert_eq!(200, json_resp2.status);
     assert_ne!(json_resp.content.token, json_resp2.content.token);
@@ -359,8 +356,7 @@ async fn request_upload_url_ok() {
     req.head_mut().extensions_mut().insert(req_username);
 
     let resp = app.call(req).await.expect("failed to make the request");
-    let body = test::read_body(resp).await;
-    let json_resp: RequestUploadUrlResponse = to_json_response(&body).unwrap();
+    let json_resp: RequestUploadUrlResponse = to_json_response(resp).await.unwrap();
 
     assert_eq!(200, json_resp.status);
     assert!(!json_resp.links.upload_url.href.is_empty());
@@ -399,8 +395,7 @@ async fn request_upload_url_empty_filename() {
     req.head_mut().extensions_mut().insert(req_username);
 
     let resp = app.call(req).await.expect("failed to make the request");
-    let body = test::read_body(resp).await;
-    let json_resp: ApiError = to_json_response(&body).unwrap();
+    let json_resp: ApiError = to_json_response(resp).await.unwrap();
 
     assert_eq!(409, json_resp.http_status);
     assert_eq!(1002, json_resp.error.code);
@@ -413,12 +408,15 @@ async fn request_upload_url_empty_filename() {
  * a better error output if the handler returned a
  * ApiError.
  */
-fn to_json_response<T>(body: &[u8]) -> Result<T, String>
+async fn to_json_response<T>(resp: actix_web::dev::ServiceResponse) -> Result<T, String>
 where
     T: serde::de::DeserializeOwned,
 {
+    let status = resp.status();
+    let body = test::read_body(resp).await;
+
     if body.is_empty() {
-        return Err(String::from("Response body is empty"));
+        return Err(format!("Body is empty. HTTP Status was: {}", status));
     }
 
     serde_json::from_slice::<T>(&body).map_err(|_| {
