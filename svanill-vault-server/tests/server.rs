@@ -21,6 +21,7 @@ use svanill_vault_server::{
     openapi_models::{
         AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
         GetStartingEndpointsResponse, RequestUploadUrlRequestBody, RequestUploadUrlResponse,
+        RetrieveListOfUserFilesResponse,
     },
 };
 
@@ -441,6 +442,57 @@ async fn request_upload_url_wrong_payload() {
         .error
         .message
         .contains("expected struct RequestUploadUrlRequestBody"));
+}
+
+#[actix_rt::test]
+async fn list_user_files_ok() {
+    let pool = setup_test_db_with_user();
+    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user_2");
+
+    let s3_resp_mock = MockRequestDispatcher::default().with_body(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+        <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+          <Name>quotes</Name>
+          <KeyCount>1</KeyCount>
+          <MaxKeys>3</MaxKeys>
+          <IsTruncated>false</IsTruncated>
+          <Contents>
+            <Key>some_object_1.txt</Key>
+            <LastModified>2013-09-17T18:07:53.000Z</LastModified>
+            <ETag>"599bab3ed2c697f1d26842727561fd94"</ETag>
+            <Size>857</Size>
+            <StorageClass>REDUCED_REDUNDANCY</StorageClass>
+          </Contents>
+          <Contents>
+            <Key>some_object_2.txt</Key>
+            <LastModified>2013-09-17T18:07:53.000Z</LastModified>
+            <ETag>"d26842727561fd94599bab3ed2c697f1"</ETag>
+            <Size>346</Size>
+            <StorageClass>REDUCED_REDUNDANCY</StorageClass>
+          </Contents>
+        </ListBucketResult>"#,
+    );
+    let s3_fs = setup_s3_fs(s3_resp_mock).await;
+
+    let mut app = test::init_service(
+        App::new()
+            .data(pool)
+            .data(s3_fs)
+            .data(tokens_cache)
+            .configure(config_handlers),
+    )
+    .await;
+
+    let req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
+        .method(Method::GET)
+        .uri("/files/")
+        .to_request();
+
+    let resp = app.call(req).await.expect("failed to make the request");
+    let json_resp: RetrieveListOfUserFilesResponse = to_json_response(resp).await.unwrap();
+
+    assert_eq!(200, json_resp.status);
+    assert_eq!(2, json_resp.content.len());
 }
 
 /**

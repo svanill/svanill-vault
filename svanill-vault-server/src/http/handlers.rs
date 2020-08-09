@@ -187,11 +187,15 @@ async fn list_user_files(
     req: HttpRequest,
     s3_fs: web::Data<Arc<file_server::FileServer>>,
 ) -> Result<HttpResponse, Error> {
-    let exts = req.extensions();
-    let username = &exts.get::<Username>().unwrap().0;
+    let username = {
+        // Free early req.extensions() so that others (like
+        // url_for_static in hateoas_file_delete) can mutably borrow it
+        let exts = req.extensions();
+        exts.get::<Username>().unwrap().0.clone()
+    };
 
     let files = s3_fs
-        .get_files_list(username)
+        .get_files_list(&username)
         .await
         .map_err(VaultError::S3Error)?;
 
