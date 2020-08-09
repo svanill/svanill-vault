@@ -20,8 +20,8 @@ use svanill_vault_server::{
     file_server,
     openapi_models::{
         AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
-        GetStartingEndpointsResponse, RequestUploadUrlRequestBody, RequestUploadUrlResponse,
-        RetrieveListOfUserFilesResponse,
+        GetStartingEndpointsResponse, RemoveFileResponse, RequestUploadUrlRequestBody,
+        RequestUploadUrlResponse, RetrieveListOfUserFilesResponse,
     },
 };
 
@@ -543,6 +543,34 @@ async fn delete_files_s3_error() {
 
     assert_eq!(500, json_resp.http_status);
     assert_eq!(1022, json_resp.error.code);
+}
+
+#[actix_rt::test]
+async fn delete_files_ok() {
+    let pool = setup_test_db_with_user();
+    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user_2");
+
+    let s3_resp_mock = MockRequestDispatcher::with_status(StatusCode::NO_CONTENT.as_u16());
+    let s3_fs = setup_s3_fs(s3_resp_mock).await;
+
+    let mut app = test::init_service(
+        App::new()
+            .data(pool)
+            .data(s3_fs)
+            .data(tokens_cache)
+            .configure(config_handlers),
+    )
+    .await;
+
+    let req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
+        .method(Method::DELETE)
+        .uri("/files/?filename=same-wheter-it-exist-or-not")
+        .to_request();
+
+    let resp = app.call(req).await.expect("failed to make the request");
+    let json_resp: RemoveFileResponse = to_json_response(resp).await.unwrap();
+
+    assert_eq!(200, json_resp.status);
 }
 
 /**
