@@ -347,15 +347,11 @@ async fn request_upload_url_ok() {
         filename: "test_filename".to_owned(),
     };
 
-    let req_username = Username("test_user_2".to_owned());
-
-    let mut req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
+    let req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
         .method(Method::POST)
         .uri("/files/request-upload-url")
         .set_json(&payload)
         .to_request();
-
-    req.head_mut().extensions_mut().insert(req_username);
 
     let resp = app.call(req).await.expect("failed to make the request");
     let json_resp: RequestUploadUrlResponse = to_json_response(resp).await.unwrap();
@@ -382,19 +378,15 @@ async fn request_upload_url_empty_filename() {
     )
     .await;
 
-    let req_username = Username("test_user_2".to_owned());
-
     let payload = RequestUploadUrlRequestBody {
         filename: "".to_owned(),
     };
 
-    let mut req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
+    let req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
         .method(Method::POST)
         .uri("/files/request-upload-url")
         .set_json(&payload)
         .to_request();
-
-    req.head_mut().extensions_mut().insert(req_username);
 
     let resp = app.call(req).await.expect("failed to make the request");
     let json_resp: ApiError = to_json_response(resp).await.unwrap();
