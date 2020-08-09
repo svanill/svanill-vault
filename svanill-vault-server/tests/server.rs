@@ -495,6 +495,35 @@ async fn list_user_files_ok() {
     assert_eq!(2, json_resp.content.len());
 }
 
+#[actix_rt::test]
+async fn list_user_files_s3_error() {
+    let pool = setup_test_db_with_user();
+    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user_2");
+
+    let s3_resp_mock = MockRequestDispatcher::default().with_body("gibberish");
+    let s3_fs = setup_s3_fs(s3_resp_mock).await;
+
+    let mut app = test::init_service(
+        App::new()
+            .data(pool)
+            .data(s3_fs)
+            .data(tokens_cache)
+            .configure(config_handlers),
+    )
+    .await;
+
+    let req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
+        .method(Method::GET)
+        .uri("/files/")
+        .to_request();
+
+    let resp = app.call(req).await.expect("failed to make the request");
+    let json_resp: ApiError = to_json_response(resp).await.unwrap();
+
+    assert_eq!(500, json_resp.http_status);
+    assert_eq!(1022, json_resp.error.code);
+}
+
 /**
  * Convert json body to the expected format.
  *
