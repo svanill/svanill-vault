@@ -9,6 +9,7 @@ pub mod file_server;
 pub mod http;
 pub mod openapi_models;
 mod rusoto_extra;
+pub mod server;
 
 #[cfg(test)]
 extern crate ctor;

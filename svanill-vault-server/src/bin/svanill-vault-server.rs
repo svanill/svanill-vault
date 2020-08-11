@@ -1,5 +1,3 @@
-use actix_web::middleware::{errhandlers::ErrorHandlers, Logger};
-use actix_web::{http, App, HttpServer};
 use anyhow::Result;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
@@ -10,7 +8,7 @@ use std::sync::{Arc, RwLock};
 use structopt::StructOpt;
 use svanill_vault_server::auth::tokens_cache::TokensCache;
 use svanill_vault_server::file_server;
-use svanill_vault_server::http::handlers::{config_handlers, render_40x, render_500};
+use svanill_vault_server::server::run;
 
 #[macro_use]
 extern crate diesel_migrations;
@@ -127,31 +125,7 @@ async fn main() -> Result<()> {
         std::time::Duration::from_secs(60 * opt.auth_token_timeout as u64),
     )));
 
-    HttpServer::new(move || {
-        App::new()
-            .data(pool.clone())
-            .data(key.clone())
-            .data(tokens_cache.clone())
-            .data(s3_fs.clone())
-            .wrap(ErrorHandlers::new().handler(http::StatusCode::INTERNAL_SERVER_ERROR, render_500))
-            .wrap(ErrorHandlers::new().handler(http::StatusCode::BAD_REQUEST, render_40x))
-            .wrap(Logger::default())
-            .wrap(
-                actix_cors::Cors::new()
-                    .allowed_methods(vec!["HEAD", "OPTIONS", "GET", "POST", "PUT", "DELETE"])
-                    .allowed_headers(vec![
-                        http::header::AUTHORIZATION,
-                        http::header::ACCEPT,
-                        http::header::CONTENT_TYPE,
-                    ])
-                    .max_age(86400)
-                    .finish(),
-            )
-            .configure(config_handlers)
-    })
-    .bind((opt.host, opt.port))?
-    .run()
-    .await?;
+    let _server = run(opt.host, opt.port, tokens_cache, key, pool, s3_fs)?.await;
 
     Ok::<(), anyhow::Error>(())
 }
