@@ -176,10 +176,11 @@ async fn get_auth_challenge_username_not_found() {
         .uri("/auth/request-challenge?username=notfound")
         .to_request();
 
-    let resp: ApiError = test::read_response_json(&mut app, req).await;
+    let resp = app.call(req).await.expect("failed to make the request");
+    let json_resp: ApiError = to_json_response(resp).await.unwrap();
 
-    assert_eq!(401, resp.http_status);
-    assert_eq!(1005, resp.error.code);
+    assert_eq!(401, json_resp.http_status);
+    assert_eq!(1005, json_resp.error.code);
 }
 
 #[actix_rt::test]
@@ -225,10 +226,11 @@ async fn answer_auth_challenge_username_not_found() {
         .set_json(&payload)
         .to_request();
 
-    let resp: ApiError = test::read_response_json(&mut app, req).await;
+    let resp = app.call(req).await.expect("failed to make the request");
+    let json_resp: ApiError = to_json_response(resp).await.unwrap();
 
-    assert_eq!(401, resp.http_status);
-    assert_eq!(1005, resp.error.code);
+    assert_eq!(401, json_resp.http_status);
+    assert_eq!(1005, json_resp.error.code);
 }
 
 #[actix_rt::test]
