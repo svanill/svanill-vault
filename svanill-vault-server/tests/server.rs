@@ -1,3 +1,4 @@
+use crate::file_server::FileServer;
 use actix_http::http::StatusCode;
 use actix_web::{dev::Service, http::Method, middleware::errhandlers::ErrorHandlers, test, App};
 use ctor::ctor;
@@ -9,8 +10,9 @@ use r2d2::Pool;
 use ring::hmac;
 use ring::test::rand::FixedByteRandom;
 use rusoto_core::Region;
-use rusoto_credential::ProvideAwsCredentials;
+use rusoto_credential::{AwsCredentials, ProvideAwsCredentials};
 use rusoto_mock::{MockCredentialsProvider, MockRequestDispatcher};
+use std::net::TcpListener;
 use std::sync::{Arc, RwLock};
 use svanill_vault_server::auth::auth_token::AuthToken;
 use svanill_vault_server::auth::{tokens_cache::TokensCache, Username};
@@ -35,25 +37,28 @@ fn init_color_backtrace() {
     color_backtrace::install();
 }
 
-fn prepare_tokens_cache(token: &str, username: &str) -> Arc<RwLock<TokensCache>> {
+fn setup_tokens_cache(token: &str, username: &str) -> TokensCache {
     let mut tokens_cache = TokensCache::default();
     tokens_cache.insert(AuthToken(token.to_string()), username.to_string());
-    Arc::new(RwLock::new(tokens_cache))
+    tokens_cache
 }
 
-fn setup_fake_random_key() -> std::sync::Arc<hmac::Key> {
+fn setup_fake_random_key() -> hmac::Key {
     let rng = FixedByteRandom { byte: 0 };
-    std::sync::Arc::new(
-        hmac::Key::generate(hmac::HMAC_SHA256, &rng).expect("Cannot generate cryptographyc key"),
+    hmac::Key::generate(hmac::HMAC_SHA256, &rng).expect("Cannot generate cryptographyc key")
     )
 }
 
 #[actix_rt::test]
 async fn noauth_noroute_must_return_401() {
-    let tokens_cache: Arc<RwLock<TokensCache>> = Arc::new(RwLock::new(TokensCache::default()));
+    let tokens_cache = TokensCache::default();
 
-    let mut app =
-        test::init_service(App::new().data(tokens_cache).configure(config_handlers)).await;
+    let mut app = test::init_service(
+        App::new()
+            .data(Arc::new(RwLock::new(tokens_cache)))
+            .configure(config_handlers),
+    )
+    .await;
 
     let req = test::TestRequest::with_header("Authorization", "Bearer dummy-invalid-token")
         .uri("/not-exist")
@@ -71,10 +76,14 @@ async fn noauth_noroute_must_return_401() {
 
 #[actix_rt::test]
 async fn auth_noroute_noget_must_return_405() {
-    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user");
+    let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user");
 
-    let mut app =
-        test::init_service(App::new().data(tokens_cache).configure(config_handlers)).await;
+    let mut app = test::init_service(
+        App::new()
+            .data(Arc::new(RwLock::new(tokens_cache)))
+            .configure(config_handlers),
+    )
+    .await;
 
     let req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
         .method(Method::PATCH)
@@ -89,10 +98,14 @@ async fn auth_noroute_noget_must_return_405() {
 
 #[actix_rt::test]
 async fn auth_noroute_get_must_return_404() {
-    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user");
+    let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user");
 
-    let mut app =
-        test::init_service(App::new().data(tokens_cache).configure(config_handlers)).await;
+    let mut app = test::init_service(
+        App::new()
+            .data(Arc::new(RwLock::new(tokens_cache)))
+            .configure(config_handlers),
+    )
+    .await;
 
     let req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
         .uri("/not-exist")
@@ -204,14 +217,14 @@ async fn get_auth_challenge_ok() {
 #[actix_rt::test]
 async fn answer_auth_challenge_username_not_found() {
     let pool = setup_test_db_with_user();
-    let tokens_cache: Arc<RwLock<TokensCache>> = Arc::new(RwLock::new(TokensCache::default()));
+    let tokens_cache = TokensCache::default();
     let random_key = setup_fake_random_key();
 
     let mut app = test::init_service(
         App::new()
             .data(pool)
-            .data(tokens_cache)
-            .data(random_key)
+            .data(Arc::new(RwLock::new(tokens_cache)))
+            .data(Arc::new(random_key))
             .configure(config_handlers),
     )
     .await;
@@ -236,14 +249,14 @@ async fn answer_auth_challenge_username_not_found() {
 #[actix_rt::test]
 async fn answer_auth_challenge_wrong_answer() {
     let pool = setup_test_db_with_user();
-    let tokens_cache: Arc<RwLock<TokensCache>> = Arc::new(RwLock::new(TokensCache::default()));
+    let tokens_cache = TokensCache::default();
     let random_key = setup_fake_random_key();
 
     let mut app = test::init_service(
         App::new()
             .data(pool)
-            .data(tokens_cache)
-            .data(random_key)
+            .data(Arc::new(RwLock::new(tokens_cache)))
+            .data(Arc::new(random_key))
             .configure(config_handlers),
     )
     .await;
@@ -267,14 +280,14 @@ async fn answer_auth_challenge_wrong_answer() {
 #[actix_rt::test]
 async fn answer_auth_challenge_ok() {
     let pool = setup_test_db_with_user();
-    let tokens_cache: Arc<RwLock<TokensCache>> = Arc::new(RwLock::new(TokensCache::default()));
+    let tokens_cache = TokensCache::default();
     let random_key = setup_fake_random_key();
 
     let mut app = test::init_service(
         App::new()
             .data(pool)
-            .data(tokens_cache)
-            .data(random_key)
+            .data(Arc::new(RwLock::new(tokens_cache)))
+            .data(Arc::new(random_key))
             .configure(config_handlers),
     )
     .await;
@@ -308,39 +321,37 @@ async fn answer_auth_challenge_ok() {
     assert_ne!(json_resp.content.token, json_resp2.content.token);
 }
 
-async fn setup_s3_fs(s3_resp_mock: MockRequestDispatcher) -> Arc<file_server::FileServer> {
+fn setup_s3_fs(s3_resp_mock: MockRequestDispatcher) -> FileServer {
     let region = Region::EuCentral1;
     let bucket = "test_bucket".to_string();
 
     let provider = MockCredentialsProvider;
-    let credentials = provider.credentials().await.unwrap();
+    let credentials = AwsCredentials::new("mock_key", "mock_secret", None, None);
 
     let client = rusoto_s3::S3Client::new_with(s3_resp_mock, provider, Default::default());
 
-    let fileserver = file_server::FileServer {
+    FileServer {
         region,
         bucket,
         client,
         credentials,
         presigned_url_timeout: std::time::Duration::from_secs(10),
-    };
-
-    Arc::new(fileserver)
+    }
 }
 
 #[actix_rt::test]
 async fn request_upload_url_ok() {
     let pool = setup_test_db_with_user();
-    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user_2");
+    let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
     let s3_resp_mock = MockRequestDispatcher::default();
-    let s3_fs = setup_s3_fs(s3_resp_mock).await;
+    let s3_fs = setup_s3_fs(s3_resp_mock);
 
     let mut app = test::init_service(
         App::new()
             .data(pool)
-            .data(s3_fs)
-            .data(tokens_cache)
+            .data(Arc::new(s3_fs))
+            .data(Arc::new(RwLock::new(tokens_cache)))
             .configure(config_handlers),
     )
     .await;
@@ -366,16 +377,16 @@ async fn request_upload_url_ok() {
 #[actix_rt::test]
 async fn request_upload_url_empty_filename() {
     let pool = setup_test_db_with_user();
-    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user_2");
+    let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
     let s3_resp_mock = MockRequestDispatcher::default().with_body("ciao");
-    let s3_fs = setup_s3_fs(s3_resp_mock).await;
+    let s3_fs = setup_s3_fs(s3_resp_mock);
 
     let mut app = test::init_service(
         App::new()
             .data(pool)
-            .data(s3_fs)
-            .data(tokens_cache)
+            .data(Arc::new(s3_fs))
+            .data(Arc::new(RwLock::new(tokens_cache)))
             .configure(config_handlers),
     )
     .await;
@@ -400,17 +411,17 @@ async fn request_upload_url_empty_filename() {
 #[actix_rt::test]
 async fn request_upload_url_wrong_payload() {
     let pool = setup_test_db_with_user();
-    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user_2");
+    let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
     let s3_resp_mock = MockRequestDispatcher::default().with_body("ciao");
-    let s3_fs = setup_s3_fs(s3_resp_mock).await;
+    let s3_fs = setup_s3_fs(s3_resp_mock);
 
     let mut app = test::init_service(
         App::new()
             .wrap(ErrorHandlers::new().handler(StatusCode::BAD_REQUEST, render_40x))
             .data(pool)
-            .data(s3_fs)
-            .data(tokens_cache)
+            .data(Arc::new(s3_fs))
+            .data(Arc::new(RwLock::new(tokens_cache)))
             .configure(config_handlers),
     )
     .await;
@@ -441,7 +452,7 @@ async fn request_upload_url_wrong_payload() {
 #[actix_rt::test]
 async fn list_user_files_ok() {
     let pool = setup_test_db_with_user();
-    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user_2");
+    let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
     let s3_resp_mock = MockRequestDispatcher::default().with_body(
         r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -466,13 +477,13 @@ async fn list_user_files_ok() {
           </Contents>
         </ListBucketResult>"#,
     );
-    let s3_fs = setup_s3_fs(s3_resp_mock).await;
+    let s3_fs = setup_s3_fs(s3_resp_mock);
 
     let mut app = test::init_service(
         App::new()
             .data(pool)
-            .data(s3_fs)
-            .data(tokens_cache)
+            .data(Arc::new(s3_fs))
+            .data(Arc::new(RwLock::new(tokens_cache)))
             .configure(config_handlers),
     )
     .await;
@@ -492,16 +503,16 @@ async fn list_user_files_ok() {
 #[actix_rt::test]
 async fn list_user_files_s3_error() {
     let pool = setup_test_db_with_user();
-    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user_2");
+    let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
     let s3_resp_mock = MockRequestDispatcher::default().with_body("gibberish");
-    let s3_fs = setup_s3_fs(s3_resp_mock).await;
+    let s3_fs = setup_s3_fs(s3_resp_mock);
 
     let mut app = test::init_service(
         App::new()
             .data(pool)
-            .data(s3_fs)
-            .data(tokens_cache)
+            .data(Arc::new(s3_fs))
+            .data(Arc::new(RwLock::new(tokens_cache)))
             .configure(config_handlers),
     )
     .await;
@@ -521,16 +532,16 @@ async fn list_user_files_s3_error() {
 #[actix_rt::test]
 async fn delete_files_s3_error() {
     let pool = setup_test_db_with_user();
-    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user_2");
+    let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
     let s3_resp_mock = MockRequestDispatcher::with_status(400);
-    let s3_fs = setup_s3_fs(s3_resp_mock).await;
+    let s3_fs = setup_s3_fs(s3_resp_mock);
 
     let mut app = test::init_service(
         App::new()
             .data(pool)
-            .data(s3_fs)
-            .data(tokens_cache)
+            .data(Arc::new(s3_fs))
+            .data(Arc::new(RwLock::new(tokens_cache)))
             .configure(config_handlers),
     )
     .await;
@@ -550,16 +561,16 @@ async fn delete_files_s3_error() {
 #[actix_rt::test]
 async fn delete_files_missing_filename() {
     let pool = setup_test_db_with_user();
-    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user_2");
+    let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
     let s3_resp_mock = MockRequestDispatcher::with_status(400);
-    let s3_fs = setup_s3_fs(s3_resp_mock).await;
+    let s3_fs = setup_s3_fs(s3_resp_mock);
 
     let mut app = test::init_service(
         App::new()
             .data(pool)
-            .data(s3_fs)
-            .data(tokens_cache)
+            .data(Arc::new(s3_fs))
+            .data(Arc::new(RwLock::new(tokens_cache)))
             .configure(config_handlers),
     )
     .await;
@@ -579,16 +590,16 @@ async fn delete_files_missing_filename() {
 #[actix_rt::test]
 async fn delete_files_ok() {
     let pool = setup_test_db_with_user();
-    let tokens_cache = prepare_tokens_cache("dummy-valid-token", "test_user_2");
+    let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
     let s3_resp_mock = MockRequestDispatcher::with_status(StatusCode::NO_CONTENT.as_u16());
-    let s3_fs = setup_s3_fs(s3_resp_mock).await;
+    let s3_fs = setup_s3_fs(s3_resp_mock);
 
     let mut app = test::init_service(
         App::new()
             .data(pool)
-            .data(s3_fs)
-            .data(tokens_cache)
+            .data(Arc::new(s3_fs))
+            .data(Arc::new(RwLock::new(tokens_cache)))
             .configure(config_handlers),
     )
     .await;
