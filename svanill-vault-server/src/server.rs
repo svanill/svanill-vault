@@ -14,13 +14,19 @@ use ring::hmac;
 use std::net::TcpListener;
 use std::sync::{Arc, RwLock};
 
-pub fn run(
-    listener: TcpListener,
-    tokens_cache: Arc<RwLock<TokensCache>>,
-    crypto_key: Arc<hmac::Key>,
-    pool: Pool<ConnectionManager<SqliteConnection>>,
-    s3_fs: Arc<FileServer>,
-) -> Result<Server, std::io::Error> {
+pub struct AppData {
+    pub tokens_cache: TokensCache,
+    pub crypto_key: hmac::Key,
+    pub pool: Pool<ConnectionManager<SqliteConnection>>,
+    pub s3_fs: FileServer,
+}
+
+pub fn run(listener: TcpListener, data: AppData) -> Result<Server, std::io::Error> {
+    let tokens_cache = Arc::new(RwLock::new(data.tokens_cache));
+    let crypto_key = Arc::new(data.crypto_key);
+    let pool = data.pool;
+    let s3_fs = Arc::new(data.s3_fs);
+
     let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())

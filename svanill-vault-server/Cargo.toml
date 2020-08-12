@@ -40,5 +40,7 @@ color-backtrace = { version = "0.4.2" }
 diesel_migrations = "1.4.0"
 
 [dev-dependencies]
+tokio = "0.2.22"
 ctor = "0.1.15"
 rusoto_mock = { version = "0.45.0", default-features = false, features = ["rustls"] }
+reqwest = { version = "0.10.7", default-features = false, features=["json", "rustls"] }

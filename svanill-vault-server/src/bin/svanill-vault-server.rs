@@ -5,11 +5,10 @@ use ring::{hmac, rand};
 use rusoto_core::Region;
 use std::env;
 use std::net::TcpListener;
-use std::sync::{Arc, RwLock};
 use structopt::StructOpt;
 use svanill_vault_server::auth::tokens_cache::TokensCache;
 use svanill_vault_server::file_server;
-use svanill_vault_server::server::run;
+use svanill_vault_server::server::{run, AppData};
 
 #[macro_use]
 extern crate diesel_migrations;
@@ -93,14 +92,12 @@ async fn main() -> Result<()> {
         Region::default()
     };
 
-    let s3_fs = Arc::new(
-        file_server::FileServer::new(
-            region,
-            opt.s3_bucket,
-            std::time::Duration::from_secs(opt.presigned_url_duration_in_min as u64 * 60),
-        )
-        .await?,
-    );
+    let s3_fs = file_server::FileServer::new(
+        region,
+        opt.s3_bucket,
+        std::time::Duration::from_secs(opt.presigned_url_duration_in_min as u64 * 60),
+    )
+    .await?;
 
     // set up database connection pool
     let connspec = opt.db_url;
@@ -116,20 +113,26 @@ async fn main() -> Result<()> {
 
     // generate server key, used to sign and verify tokens
     let rng = rand::SystemRandom::new();
-    let key = std::sync::Arc::new(
-        hmac::Key::generate(hmac::HMAC_SHA256, &rng).expect("Cannot generate cryptographyc key"),
-    );
+    let crypto_key =
+        hmac::Key::generate(hmac::HMAC_SHA256, &rng).expect("Cannot generate cryptographyc key");
 
     // Use a LRU cache to store tokens, until we add redis support
-    let tokens_cache: Arc<RwLock<TokensCache>> = Arc::new(RwLock::new(TokensCache::new(
+    let tokens_cache = TokensCache::new(
         opt.max_concurrent_users,
         std::time::Duration::from_secs(60 * opt.auth_token_timeout as u64),
-    )));
+    );
 
     let listener =
         TcpListener::bind(format!("{}:{}", opt.host, opt.port)).expect("Failed to bind port");
 
-    let _server = run(listener, tokens_cache, key, pool, s3_fs)?.await;
+    let data = AppData {
+        tokens_cache,
+        crypto_key,
+        pool,
+        s3_fs,
+    };
+
+    let _server = run(listener, data)?.await;
 
     Ok::<(), anyhow::Error>(())
 }

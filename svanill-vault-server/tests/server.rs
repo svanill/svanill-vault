@@ -10,7 +10,7 @@ use r2d2::Pool;
 use ring::hmac;
 use ring::test::rand::FixedByteRandom;
 use rusoto_core::Region;
-use rusoto_credential::{AwsCredentials, ProvideAwsCredentials};
+use rusoto_credential::AwsCredentials;
 use rusoto_mock::{MockCredentialsProvider, MockRequestDispatcher};
 use std::net::TcpListener;
 use std::sync::{Arc, RwLock};
@@ -25,6 +25,7 @@ use svanill_vault_server::{
         GetStartingEndpointsResponse, RemoveFileResponse, RequestUploadUrlRequestBody,
         RequestUploadUrlResponse, RetrieveListOfUserFilesResponse,
     },
+    server::AppData,
 };
 
 #[macro_use]
@@ -46,29 +47,80 @@ fn setup_tokens_cache(token: &str, username: &str) -> TokensCache {
 fn setup_fake_random_key() -> hmac::Key {
     let rng = FixedByteRandom { byte: 0 };
     hmac::Key::generate(hmac::HMAC_SHA256, &rng).expect("Cannot generate cryptographyc key")
-    )
+}
+
+pub trait AppDataBuilder {
+    fn new() -> Self;
+    fn tokens_cache(self, tokens_cache: TokensCache) -> Self;
+    fn crypto_key(self, crypto_key: hmac::Key) -> Self;
+    fn pool(self, pool: Pool<ConnectionManager<SqliteConnection>>) -> Self;
+    fn s3_fs(self, s3_fs: FileServer) -> Self;
+}
+
+impl AppDataBuilder for AppData {
+    fn new() -> AppData {
+        let tokens_cache = TokensCache::default();
+        let crypto_key = setup_fake_random_key();
+        let pool = setup_test_db();
+        let s3_fs = setup_s3_fs(MockRequestDispatcher::default());
+
+        AppData {
+            tokens_cache,
+            crypto_key,
+            pool,
+            s3_fs,
+        }
+    }
+
+    fn tokens_cache(mut self, tokens_cache: TokensCache) -> Self {
+        self.tokens_cache = tokens_cache;
+        self
+    }
+
+    fn crypto_key(mut self, crypto_key: hmac::Key) -> Self {
+        self.crypto_key = crypto_key;
+        self
+    }
+
+    fn pool(mut self, pool: Pool<ConnectionManager<SqliteConnection>>) -> Self {
+        self.pool = pool;
+        self
+    }
+    fn s3_fs(mut self, s3_fs: FileServer) -> Self {
+        self.s3_fs = s3_fs;
+        self
+    }
+}
+
+fn spawn_app(data: AppData) -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
+
+    // Retrieve the port assigned to us by the OS
+    let port = listener.local_addr().unwrap().port();
+
+    let server = svanill_vault_server::server::run(listener, data).expect("Failed to bind address");
+    let _ = tokio::spawn(server);
+
+    // We return the application address to the caller!
+    format!("http://127.0.0.1:{}", port)
 }
 
 #[actix_rt::test]
 async fn noauth_noroute_must_return_401() {
-    let tokens_cache = TokensCache::default();
+    let address = spawn_app(AppData::new());
+    let client = reqwest::Client::new();
 
-    let mut app = test::init_service(
-        App::new()
-            .data(Arc::new(RwLock::new(tokens_cache)))
-            .configure(config_handlers),
-    )
-    .await;
+    let resp = client
+        .get(&format!("{}/not-exist", &address))
+        .header("Authorization", "Bearer dummy-invalid-token")
+        .send()
+        .await
+        .expect("Failed to execute request");
 
-    let req = test::TestRequest::with_header("Authorization", "Bearer dummy-invalid-token")
-        .uri("/not-exist")
-        .to_request();
-
-    let resp = app.call(req).await;
-
-    // app call fails because the auth middleware interrupts it early
-    let web_error = resp.err().unwrap();
-    let json_resp: &ApiError = web_error.as_error::<ApiError>().unwrap();
+    let json_resp: ApiError = resp
+        .json::<ApiError>()
+        .await
+        .expect("Cannot decode JSON response");
 
     assert_eq!(401, json_resp.http_status);
     assert_eq!(401, json_resp.error.code);
