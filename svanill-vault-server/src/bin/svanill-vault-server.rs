@@ -4,6 +4,7 @@ use diesel::r2d2::{self, ConnectionManager};
 use ring::{hmac, rand};
 use rusoto_core::Region;
 use std::env;
+use std::net::TcpListener;
 use std::sync::{Arc, RwLock};
 use structopt::StructOpt;
 use svanill_vault_server::auth::tokens_cache::TokensCache;
@@ -125,7 +126,10 @@ async fn main() -> Result<()> {
         std::time::Duration::from_secs(60 * opt.auth_token_timeout as u64),
     )));
 
-    let _server = run(opt.host, opt.port, tokens_cache, key, pool, s3_fs)?.await;
+    let listener =
+        TcpListener::bind(format!("{}:{}", opt.host, opt.port)).expect("Failed to bind port");
+
+    let _server = run(listener, tokens_cache, key, pool, s3_fs)?.await;
 
     Ok::<(), anyhow::Error>(())
 }

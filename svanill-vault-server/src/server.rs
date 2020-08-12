@@ -11,11 +11,11 @@ use diesel::{
 };
 use r2d2::Pool;
 use ring::hmac;
+use std::net::TcpListener;
 use std::sync::{Arc, RwLock};
 
 pub fn run(
-    host: String,
-    port: u16,
+    listener: TcpListener,
     tokens_cache: Arc<RwLock<TokensCache>>,
     crypto_key: Arc<hmac::Key>,
     pool: Pool<ConnectionManager<SqliteConnection>>,
@@ -43,7 +43,7 @@ pub fn run(
             )
             .configure(config_handlers)
     })
-    .bind((host, port))?
+    .listen(listener)?
     .run();
 
     // No .await here!
