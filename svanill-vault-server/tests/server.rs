@@ -442,30 +442,25 @@ async fn request_upload_url_empty_filename() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let s3_resp_mock = MockRequestDispatcher::default().with_body("ciao");
-    let s3_fs = setup_s3_fs(s3_resp_mock);
-
-    let mut app = test::init_service(
-        App::new()
-            .data(pool)
-            .data(Arc::new(s3_fs))
-            .data(Arc::new(RwLock::new(tokens_cache)))
-            .configure(config_handlers),
-    )
-    .await;
+    let address = spawn_app(AppData::new().pool(pool).tokens_cache(tokens_cache));
 
     let payload = RequestUploadUrlRequestBody {
         filename: "".to_owned(),
     };
 
-    let req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
-        .method(Method::POST)
-        .uri("/files/request-upload-url")
-        .set_json(&payload)
-        .to_request();
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(&format!("{}/files/request-upload-url", &address))
+        .header("Authorization", "Bearer dummy-valid-token")
+        .json(&payload)
+        .send()
+        .await
+        .expect("Failed to execute request");
 
-    let resp = app.call(req).await.expect("failed to make the request");
-    let json_resp: ApiError = to_json_response(resp).await.unwrap();
+    let json_resp: ApiError = resp
+        .json::<ApiError>()
+        .await
+        .expect("Cannot decode JSON response");
 
     assert_eq!(409, json_resp.http_status);
     assert_eq!(1002, json_resp.error.code);
