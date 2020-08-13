@@ -130,22 +130,24 @@ async fn noauth_noroute_must_return_401() {
 async fn auth_noroute_noget_must_return_405() {
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user");
 
-    let mut app = test::init_service(
-        App::new()
-            .data(Arc::new(RwLock::new(tokens_cache)))
-            .configure(config_handlers),
-    )
-    .await;
+    let address = spawn_app(AppData::new().tokens_cache(tokens_cache));
 
-    let req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
-        .method(Method::PATCH)
-        .uri("/not-exist")
-        .to_request();
+    let client = reqwest::Client::new();
+    let resp = client
+        // use a "not GET" request on an unexistent route
+        .patch(&format!("{}/not-exist", &address))
+        .header("Authorization", "Bearer dummy-valid-token")
+        .send()
+        .await
+        .expect("Failed to execute request");
 
-    let resp: ApiError = test::read_response_json(&mut app, req).await;
+    let json_resp: ApiError = resp
+        .json::<ApiError>()
+        .await
+        .expect("Cannot decode JSON response");
 
-    assert_eq!(405, resp.http_status);
-    assert_eq!(405, resp.error.code);
+    assert_eq!(405, json_resp.http_status);
+    assert_eq!(405, json_resp.error.code);
 }
 
 #[actix_rt::test]
