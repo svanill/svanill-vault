@@ -175,13 +175,21 @@ async fn auth_noroute_get_must_return_404() {
 
 #[actix_rt::test]
 async fn root() {
-    let mut app = test::init_service(App::new().configure(config_handlers)).await;
+    let address = spawn_app(AppData::new());
 
-    let req = test::TestRequest::get().uri("/").to_request();
+    let client = reqwest::Client::new();
+    let resp = client
+        .get(&format!("{}/", &address))
+        .send()
+        .await
+        .expect("Failed to execute request");
 
-    let resp: GetStartingEndpointsResponse = test::read_response_json(&mut app, req).await;
+    let json_resp: GetStartingEndpointsResponse = resp
+        .json::<GetStartingEndpointsResponse>()
+        .await
+        .expect("Cannot decode JSON response");
 
-    assert_eq!(200, resp.status);
+    assert_eq!(200, json_resp.status);
 }
 
 fn setup_test_db() -> Pool<ConnectionManager<SqliteConnection>> {
