@@ -227,19 +227,22 @@ fn setup_test_db_with_user() -> Pool<ConnectionManager<SqliteConnection>> {
 
 #[actix_rt::test]
 async fn get_auth_challenge_no_username_provided() {
-    let pool = setup_test_db();
+    let address = spawn_app(AppData::new());
 
-    let mut app =
-        test::init_service(App::new().data(pool.clone()).configure(config_handlers)).await;
+    let client = reqwest::Client::new();
+    let resp = client
+        .get(&format!("{}/auth/request-challenge", &address))
+        .send()
+        .await
+        .expect("Failed to execute request");
 
-    let req = test::TestRequest::get()
-        .uri("/auth/request-challenge")
-        .to_request();
+    let json_resp: ApiError = resp
+        .json::<ApiError>()
+        .await
+        .expect("Cannot decode JSON response");
 
-    let resp: ApiError = test::read_response_json(&mut app, req).await;
-
-    assert_eq!(409, resp.http_status);
-    assert_eq!(1002, resp.error.code);
+    assert_eq!(409, json_resp.http_status);
+    assert_eq!(1002, json_resp.error.code);
 }
 
 #[actix_rt::test]
