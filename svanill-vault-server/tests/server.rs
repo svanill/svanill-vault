@@ -247,17 +247,22 @@ async fn get_auth_challenge_no_username_provided() {
 
 #[actix_rt::test]
 async fn get_auth_challenge_username_not_found() {
-    let pool = setup_test_db();
+    let address = spawn_app(AppData::new());
 
-    let mut app =
-        test::init_service(App::new().data(pool.clone()).configure(config_handlers)).await;
+    let client = reqwest::Client::new();
+    let resp = client
+        .get(&format!(
+            "{}/auth/request-challenge?username=notfound",
+            &address
+        ))
+        .send()
+        .await
+        .expect("Failed to execute request");
 
-    let req = test::TestRequest::get()
-        .uri("/auth/request-challenge?username=notfound")
-        .to_request();
-
-    let resp = app.call(req).await.expect("failed to make the request");
-    let json_resp: ApiError = to_json_response(resp).await.unwrap();
+    let json_resp: ApiError = resp
+        .json::<ApiError>()
+        .await
+        .expect("Cannot decode JSON response");
 
     assert_eq!(401, json_resp.http_status);
     assert_eq!(1005, json_resp.error.code);
