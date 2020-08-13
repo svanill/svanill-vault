@@ -1,6 +1,6 @@
 use crate::file_server::FileServer;
 use actix_http::http::StatusCode;
-use actix_web::{dev::Service, http::Method, middleware::errhandlers::ErrorHandlers, test, App};
+use actix_web::{dev::Service, http::Method, test, App};
 use ctor::ctor;
 use diesel::{
     r2d2::{self, ConnectionManager},
@@ -15,9 +15,9 @@ use rusoto_mock::{MockCredentialsProvider, MockRequestDispatcher};
 use std::net::TcpListener;
 use std::sync::{Arc, RwLock};
 use svanill_vault_server::auth::auth_token::AuthToken;
-use svanill_vault_server::auth::{tokens_cache::TokensCache, Username};
+use svanill_vault_server::auth::tokens_cache::TokensCache;
 use svanill_vault_server::errors::ApiError;
-use svanill_vault_server::http::handlers::{config_handlers, render_40x};
+use svanill_vault_server::http::handlers::config_handlers;
 use svanill_vault_server::{
     file_server,
     openapi_models::{
@@ -471,40 +471,27 @@ async fn request_upload_url_wrong_payload() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let s3_resp_mock = MockRequestDispatcher::default().with_body("ciao");
-    let s3_fs = setup_s3_fs(s3_resp_mock);
+    let address = spawn_app(AppData::new().pool(pool).tokens_cache(tokens_cache));
 
-    let mut app = test::init_service(
-        App::new()
-            .wrap(ErrorHandlers::new().handler(StatusCode::BAD_REQUEST, render_40x))
-            .data(pool)
-            .data(Arc::new(s3_fs))
-            .data(Arc::new(RwLock::new(tokens_cache)))
-            .configure(config_handlers),
-    )
-    .await;
+    let payload = "not a proper payload";
 
-    let req_username = Username("test_user_2".to_owned());
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(&format!("{}/files/request-upload-url", &address))
+        .header("Authorization", "Bearer dummy-valid-token")
+        .body(payload)
+        .send()
+        .await
+        .expect("Failed to execute request");
 
-    let payload = "not a proper payload".to_string();
-
-    let mut req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
-        .method(Method::POST)
-        .uri("/files/request-upload-url")
-        .set_json(&payload)
-        .to_request();
-
-    req.head_mut().extensions_mut().insert(req_username);
-
-    let resp = app.call(req).await.expect("failed to make the request");
-    let json_resp: ApiError = to_json_response(resp).await.unwrap();
+    let json_resp: ApiError = resp
+        .json::<ApiError>()
+        .await
+        .expect("Cannot decode JSON response");
 
     assert_eq!(400, json_resp.http_status);
     assert_eq!(1024, json_resp.error.code);
-    assert!(json_resp
-        .error
-        .message
-        .contains("expected struct RequestUploadUrlRequestBody"));
+    assert_eq!(json_resp.error.message, "Content type error");
 }
 
 #[actix_rt::test]
