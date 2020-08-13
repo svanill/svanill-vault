@@ -295,30 +295,25 @@ async fn get_auth_challenge_ok() {
 #[actix_rt::test]
 async fn answer_auth_challenge_username_not_found() {
     let pool = setup_test_db_with_user();
-    let tokens_cache = TokensCache::default();
-    let random_key = setup_fake_random_key();
-
-    let mut app = test::init_service(
-        App::new()
-            .data(pool)
-            .data(Arc::new(RwLock::new(tokens_cache)))
-            .data(Arc::new(random_key))
-            .configure(config_handlers),
-    )
-    .await;
+    let address = spawn_app(AppData::new().pool(pool));
 
     let payload = AnswerUserChallengeRequest {
         username: "notfound".to_owned(),
         answer: "any_answer".to_owned(),
     };
 
-    let req = test::TestRequest::post()
-        .uri("/auth/answer-challenge")
-        .set_json(&payload)
-        .to_request();
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(&format!("{}/auth/answer-challenge", &address))
+        .json(&payload)
+        .send()
+        .await
+        .expect("Failed to execute request");
 
-    let resp = app.call(req).await.expect("failed to make the request");
-    let json_resp: ApiError = to_json_response(resp).await.unwrap();
+    let json_resp: ApiError = resp
+        .json::<ApiError>()
+        .await
+        .expect("Cannot decode JSON response");
 
     assert_eq!(401, json_resp.http_status);
     assert_eq!(1005, json_resp.error.code);
