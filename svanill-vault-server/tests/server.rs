@@ -349,42 +349,41 @@ async fn answer_auth_challenge_wrong_answer() {
 #[actix_rt::test]
 async fn answer_auth_challenge_ok() {
     let pool = setup_test_db_with_user();
-    let tokens_cache = TokensCache::default();
-    let random_key = setup_fake_random_key();
-
-    let mut app = test::init_service(
-        App::new()
-            .data(pool)
-            .data(Arc::new(RwLock::new(tokens_cache)))
-            .data(Arc::new(random_key))
-            .configure(config_handlers),
-    )
-    .await;
+    let address = spawn_app(AppData::new().pool(pool));
 
     let payload = AnswerUserChallengeRequest {
         username: "test_user_2".to_owned(),
         answer: "answer2".to_owned(),
     };
 
-    let req = test::TestRequest::post()
-        .uri("/auth/answer-challenge")
-        .set_json(&payload)
-        .to_request();
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(&format!("{}/auth/answer-challenge", &address))
+        .json(&payload)
+        .send()
+        .await
+        .expect("Failed to execute request");
 
-    let resp = app.call(req).await.expect("failed to make the request");
-    let json_resp: AnswerUserChallengeResponse = to_json_response(resp).await.unwrap();
+    let json_resp: AnswerUserChallengeResponse = resp
+        .json::<AnswerUserChallengeResponse>()
+        .await
+        .expect("Cannot decode JSON response");
 
     assert_eq!(200, json_resp.status);
     assert!(!json_resp.content.token.is_empty());
 
     // Do the same request again and verify that every token is unique
-    let req2 = test::TestRequest::post()
-        .uri("/auth/answer-challenge")
-        .set_json(&payload)
-        .to_request();
+    let resp2 = client
+        .post(&format!("{}/auth/answer-challenge", &address))
+        .json(&payload)
+        .send()
+        .await
+        .expect("Failed to execute request");
 
-    let resp2 = app.call(req2).await.expect("failed to make the request");
-    let json_resp2: AnswerUserChallengeResponse = to_json_response(resp2).await.unwrap();
+    let json_resp2: AnswerUserChallengeResponse = resp2
+        .json::<AnswerUserChallengeResponse>()
+        .await
+        .expect("Cannot decode JSON response");
 
     assert_eq!(200, json_resp2.status);
     assert_ne!(json_resp.content.token, json_resp2.content.token);
