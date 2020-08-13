@@ -524,22 +524,25 @@ async fn list_user_files_ok() {
     );
     let s3_fs = setup_s3_fs(s3_resp_mock);
 
-    let mut app = test::init_service(
-        App::new()
-            .data(pool)
-            .data(Arc::new(s3_fs))
-            .data(Arc::new(RwLock::new(tokens_cache)))
-            .configure(config_handlers),
-    )
-    .await;
+    let address = spawn_app(
+        AppData::new()
+            .pool(pool)
+            .tokens_cache(tokens_cache)
+            .s3_fs(s3_fs),
+    );
 
-    let req = test::TestRequest::with_header("Authorization", "Bearer dummy-valid-token")
-        .method(Method::GET)
-        .uri("/files/")
-        .to_request();
+    let client = reqwest::Client::new();
+    let resp = client
+        .get(&format!("{}/files/", &address))
+        .header("Authorization", "Bearer dummy-valid-token")
+        .send()
+        .await
+        .expect("Failed to execute request");
 
-    let resp = app.call(req).await.expect("failed to make the request");
-    let json_resp: RetrieveListOfUserFilesResponse = to_json_response(resp).await.unwrap();
+    let json_resp: RetrieveListOfUserFilesResponse = resp
+        .json::<RetrieveListOfUserFilesResponse>()
+        .await
+        .expect("Cannot decode JSON response");
 
     assert_eq!(200, json_resp.status);
     assert_eq!(2, json_resp.content.len());
