@@ -271,16 +271,22 @@ async fn get_auth_challenge_username_not_found() {
 #[actix_rt::test]
 async fn get_auth_challenge_ok() {
     let pool = setup_test_db_with_user();
+    let address = spawn_app(AppData::new().pool(pool));
 
-    let mut app =
-        test::init_service(App::new().data(pool.clone()).configure(config_handlers)).await;
+    let client = reqwest::Client::new();
+    let resp = client
+        .get(&format!(
+            "{}/auth/request-challenge?username=test_user_2",
+            &address
+        ))
+        .send()
+        .await
+        .expect("Failed to execute request");
 
-    let req = test::TestRequest::get()
-        .uri("/auth/request-challenge?username=test_user_2")
-        .to_request();
-
-    let resp = app.call(req).await.expect("failed to make the request");
-    let json_resp: AskForTheChallengeResponse = to_json_response(resp).await.unwrap();
+    let json_resp: AskForTheChallengeResponse = resp
+        .json::<AskForTheChallengeResponse>()
+        .await
+        .expect("Cannot decode JSON response");
 
     assert_eq!(200, json_resp.status);
     assert_eq!("challenge2", json_resp.content.challenge);
