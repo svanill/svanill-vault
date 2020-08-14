@@ -8,7 +8,7 @@ use rusoto_credential::{AwsCredentials, ChainProvider, CredentialsError, Provide
 use rusoto_s3::util::{PreSignedRequest, PreSignedRequestOption};
 use rusoto_s3::{
     DeleteObjectError, DeleteObjectRequest, GetObjectRequest, HeadObjectError, HeadObjectRequest,
-    ListObjectsV2Error, ListObjectsV2Request, S3Client, S3,
+    ListObjectsV2Request, S3Client, S3,
 };
 use std::default::Default;
 use std::{collections::HashMap, ops::Add};
@@ -21,7 +21,7 @@ pub enum FileServerError {
     #[error("cannot retrieve object metadata")]
     CannotRetrieveMetadata(#[from] RusotoError<HeadObjectError>),
     #[error("cannot retrieve files list")]
-    CannotRetrieveFilesList(#[from] RusotoError<ListObjectsV2Error>),
+    CannotRetrieveFilesList(String),
     #[error("TLS error")]
     TlsError(#[from] TlsError),
     #[error("failed to obtain S3 credentials")]
@@ -67,7 +67,11 @@ impl FileServer {
             ..Default::default()
         };
 
-        let s3_objects = self.client.list_objects_v2(list_request).await?;
+        let s3_objects = self
+            .client
+            .list_objects_v2(list_request)
+            .await
+            .map_err(|e| FileServerError::CannotRetrieveFilesList(e.to_string()))?;
 
         let files: Vec<FileDTO> = try_join_all(
             s3_objects
