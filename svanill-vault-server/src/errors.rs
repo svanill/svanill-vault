@@ -76,6 +76,7 @@ pub enum VaultError {
     ChallengeMismatchError,
     S3Error(FileServerError),
     UnexpectedError(String),
+    PolicyDataError(FileServerError),
 }
 
 impl From<&VaultError> for ApiError {
@@ -121,6 +122,11 @@ impl From<&VaultError> for ApiError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 1023,
                 String::from("Internal Server Error"),
+            ),
+            VaultError::PolicyDataError(e) => ApiError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                1025,
+                e.to_string(),
             ),
         }
     }

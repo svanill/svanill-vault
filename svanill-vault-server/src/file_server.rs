@@ -28,6 +28,8 @@ pub enum FileServerError {
     CredentialsError(#[from] CredentialsError),
     #[error("cannot delete file")]
     CannotDelete(#[from] RusotoError<DeleteObjectError>),
+    #[error("cannot generate policy data form")]
+    PolicyDataError(String),
 }
 
 pub struct FileServer {
@@ -147,7 +149,7 @@ impl FileServer {
         &self,
         username: &str,
         filename: &str,
-    ) -> Result<(String, String, HashMap<String, String>), String> {
+    ) -> Result<(String, String, HashMap<String, String>), FileServerError> {
         let bytes_range_min = 10;
         let bytes_range_max = 1_048_576;
 
@@ -164,7 +166,8 @@ impl FileServer {
             .set_key(&key)
             .set_content_length_range(bytes_range_min, bytes_range_max)
             .set_expiration(expiration_date)
-            .build_form_data()?;
+            .build_form_data()
+            .map_err(FileServerError::PolicyDataError)?;
 
         let retrieve_url = self.get_presigned_retrieve_url(key);
 

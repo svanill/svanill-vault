@@ -161,7 +161,7 @@ async fn request_upload_url(
 
     let (upload_url, retrieve_url, form_data) = s3_fs
         .get_post_policy_data(username, filename)
-        .map_err(VaultError::UnexpectedError)?;
+        .map_err(VaultError::PolicyDataError)?;
 
     Ok(HttpResponse::Ok().json(
         serde_json::from_value::<RequestUploadUrlResponse>(json!({
