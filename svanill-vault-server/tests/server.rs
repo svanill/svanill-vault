@@ -1,6 +1,5 @@
 use crate::file_server::FileServer;
 use actix_http::http::StatusCode;
-use actix_web::{dev::Service, http::Method, test, App};
 use ctor::ctor;
 use diesel::{
     r2d2::{self, ConnectionManager},
@@ -13,11 +12,9 @@ use rusoto_core::Region;
 use rusoto_credential::AwsCredentials;
 use rusoto_mock::{MockCredentialsProvider, MockRequestDispatcher};
 use std::net::TcpListener;
-use std::sync::{Arc, RwLock};
 use svanill_vault_server::auth::auth_token::AuthToken;
 use svanill_vault_server::auth::tokens_cache::TokensCache;
 use svanill_vault_server::errors::ApiError;
-use svanill_vault_server::http::handlers::config_handlers;
 use svanill_vault_server::{
     file_server,
     openapi_models::{
@@ -676,37 +673,4 @@ async fn delete_files_ok() {
         .expect("Cannot decode JSON response");
 
     assert_eq!(200, json_resp.status);
-}
-
-/**
- * Convert json body to the expected format.
- *
- * Contrary to test::read_response_json it provides
- * a better error output if the handler returned a
- * ApiError.
- */
-async fn to_json_response<T>(resp: actix_web::dev::ServiceResponse) -> Result<T, String>
-where
-    T: serde::de::DeserializeOwned,
-{
-    let status = resp.status();
-    let body = test::read_body(resp).await;
-
-    if body.is_empty() {
-        return Err(format!("Body is empty. HTTP Status was: {}", status));
-    }
-
-    serde_json::from_slice::<T>(&body).map_err(|_| {
-        // failed to deserialize. Was perhaps an ApiError?
-        let res = serde_json::from_slice::<ApiError>(&body);
-
-        if let Ok(api_error) = res {
-            serde_json::to_string(&api_error).unwrap()
-        } else {
-            format!(
-                "Response body does not match expected JSON format. Got: {}",
-                std::str::from_utf8(&body).unwrap()
-            )
-        }
-    })
 }
