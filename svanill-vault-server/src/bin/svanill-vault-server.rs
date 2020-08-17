@@ -83,6 +83,14 @@ async fn main() -> Result<()> {
         env::set_var("AWS_DEFAULT_REGION", region);
     }
 
+    if let Some(access_key_id) = opt.s3_access_key_id {
+        env::set_var("AWS_ACCESS_KEY_ID", access_key_id);
+    }
+
+    if let Some(secret_access_key) = opt.s3_secret_access_key {
+        env::set_var("AWS_SECRET_ACCESS_KEY", secret_access_key);
+    }
+
     let region = if let Some(s3_endpoint) = opt.s3_endpoint {
         Region::Custom {
             name: env::var("AWS_DEFAULT_REGION").unwrap_or_else(|_| "us-east-1".to_owned()),
