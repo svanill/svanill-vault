@@ -2,6 +2,7 @@ use chrono::Datelike;
 use chrono::{DateTime, Utc};
 use rusoto_core::Region;
 use rusoto_signature::signature::SignedRequest;
+use serde::ser::{Serialize, SerializeSeq, Serializer};
 use std::collections::HashMap;
 use time::Date;
 
@@ -9,7 +10,7 @@ use time::Date;
 pub struct PostPolicy<'a> {
     expiration: Option<DateTime<Utc>>,
     content_length_range: Option<(u64, u64)>,
-    conditions: Vec<[&'a str; 3]>,
+    conditions: Vec<Condition<'a>>,
     form_data: HashMap<String, String>,
     bucket_name: Option<&'a str>,
     key: Option<&'a str>,
@@ -21,7 +22,34 @@ pub struct PostPolicy<'a> {
 #[derive(Serialize)]
 pub struct SerializablePolicy<'a> {
     expiration: &'a str,
-    conditions: &'a Vec<[&'a str; 3]>,
+    conditions: &'a Vec<Condition<'a>>,
+}
+
+struct Condition<'a>((&'a str, &'a str, &'a str));
+
+impl<'a> Serialize for Condition<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(3))?;
+        let v = &self.0;
+        seq.serialize_element(v.0)?;
+
+        if v.0 == "content-length-range" {
+            seq.serialize_element(&v.1.parse::<u64>().map_err(|_| {
+                serde::ser::Error::custom("expected u64 value, the minimum content length")
+            })?)?;
+            seq.serialize_element(&v.2.parse::<u64>().map_err(|_| {
+                serde::ser::Error::custom("expected u64 value, the maximum content length")
+            })?)?;
+        } else {
+            seq.serialize_element(v.1)?;
+            seq.serialize_element(v.2)?;
+        }
+
+        seq.end()
+    }
 }
 
 impl<'a> PostPolicy<'a> {
@@ -103,12 +131,14 @@ impl<'a> PostPolicy<'a> {
     /// Set content length range policy condition
     pub fn set_content_length_range(mut self, min_length: u64, max_length: u64) -> Self {
         self.content_length_range = Some((min_length, max_length));
+        // We should append the policy here, but ownership it's tricky,
+        // so we'll do it inside build_form_data()
         self
     }
 
     /// Append policy condition
     pub fn append_policy(mut self, condition: &'a str, target: &'a str, value: &'a str) -> Self {
-        self.conditions.push([condition, target, value]);
+        self.conditions.push(Condition((condition, target, value)));
         self
     }
 
@@ -157,8 +187,6 @@ impl<'a> PostPolicy<'a> {
             .format("%Y-%m-%dT%H:%M:%S.000Z")
             .to_string();
 
-        let mut conditions: Vec<[&str; 3]> = self.conditions.into_iter().collect();
-
         let current_time = Utc::now();
         let current_time_fmted = current_time.format("%Y%m%dT%H%M%SZ").to_string();
         let current_date = current_time.format("%Y%m%d").to_string();
@@ -172,9 +200,23 @@ impl<'a> PostPolicy<'a> {
             &access_key_id, &current_date, &region_name, "s3",
         );
 
-        conditions.push(["eq", "$x-amz-date", &current_time_fmted]);
-        conditions.push(["eq", "$x-amz-algorithm", "AWS4-HMAC-SHA256"]);
-        conditions.push(["eq", "$x-amz-credential", &x_amz_credential]);
+        let mut conditions: Vec<Condition> = self.conditions.into_iter().collect();
+
+        conditions.push(Condition(("eq", "$x-amz-date", &current_time_fmted)));
+        conditions.push(Condition(("eq", "$x-amz-algorithm", "AWS4-HMAC-SHA256")));
+        conditions.push(Condition(("eq", "$x-amz-credential", &x_amz_credential)));
+
+        let min_length_as_string: String;
+        let max_length_as_string: String;
+        if let Some((min, max)) = self.content_length_range {
+            min_length_as_string = min.to_string();
+            max_length_as_string = max.to_string();
+            conditions.push(Condition((
+                "content-length-range",
+                &min_length_as_string,
+                &max_length_as_string,
+            )))
+        }
 
         let policy_to_serialize = SerializablePolicy {
             expiration: &expiration,
