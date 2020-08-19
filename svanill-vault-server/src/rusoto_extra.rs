@@ -5,9 +5,12 @@ use serde::ser::{Serialize, SerializeSeq, Serializer};
 use std::collections::HashMap;
 use time::Date;
 
+// Policy explanation:
+// http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html
+
 #[derive(Default)]
 pub struct PostPolicy<'a> {
-    expiration: Option<DateTime<Utc>>,
+    expiration: Option<&'a DateTime<Utc>>,
     content_length_range: Option<(u64, u64)>,
     conditions: Vec<Condition<'a>>,
     form_data: HashMap<String, String>,
@@ -53,7 +56,7 @@ impl<'a> Serialize for Condition<'a> {
 
 impl<'a> PostPolicy<'a> {
     /// Set expiration time
-    pub fn set_expiration(mut self, t: DateTime<Utc>) -> Self {
+    pub fn set_expiration(mut self, t: &'a DateTime<Utc>) -> Self {
         self.expiration = Some(t);
         self
     }

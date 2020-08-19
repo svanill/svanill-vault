@@ -166,7 +166,7 @@ impl FileServer {
             .set_secret_access_key(&self.credentials.aws_secret_access_key())
             .set_key(&key)
             .set_content_length_range(bytes_range_min, bytes_range_max)
-            .set_expiration(expiration_date)
+            .set_expiration(&expiration_date)
             .build_form_data()
             .map_err(FileServerError::PolicyDataError)?;
 
