@@ -75,14 +75,15 @@ impl<'a> PostPolicy<'a> {
 
     /// Set key startswith policy condition
     #[allow(dead_code)]
-    pub fn set_key_startswith(mut self, key_startswith: &'a str) -> Self {
-        if key_startswith.is_empty() {
+    pub fn set_key_startswith(mut self, key: &'a str) -> Self {
+        if key.is_empty() {
             return self;
         }
 
-        self = self.append_policy("starts-with", "$key", &key_startswith);
-        self.form_data
-            .insert("key".to_string(), key_startswith.to_string());
+        self.key = Some(key);
+
+        self = self.append_policy("starts-with", "$key", &key);
+        self.form_data.insert("key".to_string(), key.to_string());
         self
     }
 
@@ -139,8 +140,8 @@ impl<'a> PostPolicy<'a> {
     }
 
     /// Append policy condition
-    pub fn append_policy(mut self, condition: &'a str, target: &'a str, value: &'a str) -> Self {
-        self.conditions.push(Condition((condition, target, value)));
+    pub fn append_policy(mut self, match_type: &'a str, target: &'a str, value: &'a str) -> Self {
+        self.conditions.push(Condition((match_type, target, value)));
         self
     }
 
@@ -189,7 +190,12 @@ impl<'a> PostPolicy<'a> {
             .format("%Y-%m-%dT%H:%M:%S.000Z")
             .to_string();
 
-        let current_time = Utc::now();
+        let current_time = if cfg!(test) {
+            use chrono::TimeZone;
+            Utc.ymd(2020, 1, 1).and_hms(0, 0, 0)
+        } else {
+            Utc::now()
+        };
         let current_time_fmted = current_time.format("%Y%m%dT%H%M%SZ").to_string();
         let current_date = current_time.format("%Y%m%d").to_string();
 
@@ -310,5 +316,214 @@ mod signature {
                 .code()
                 .as_ref(),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::prelude::*;
+
+    const BUCKET: &str = "the-bucket";
+    const REGION: Region = Region::EuCentral1;
+    const ACCESS_KEY_ID: &str = "foo_access_key";
+    const SECRET_ACCESS_KEY: &str = "foo_secret_key";
+    const OBJECT_KEY: &str = "the-object-key";
+
+    #[test]
+    fn bucket_name_is_required() {
+        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+
+        let res = PostPolicy::default()
+            .set_region(&REGION)
+            .set_access_key_id(ACCESS_KEY_ID)
+            .set_secret_access_key(SECRET_ACCESS_KEY)
+            .set_key(OBJECT_KEY)
+            .set_expiration(&expiration_date)
+            .build_form_data();
+
+        assert_eq!(res, Err("Bucket name must be specified".to_string()));
+    }
+
+    #[test]
+    fn region_is_required() {
+        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+
+        let res = PostPolicy::default()
+            .set_bucket_name(&BUCKET)
+            .set_access_key_id(ACCESS_KEY_ID)
+            .set_secret_access_key(SECRET_ACCESS_KEY)
+            .set_key(OBJECT_KEY)
+            .set_expiration(&expiration_date)
+            .build_form_data();
+
+        assert_eq!(res, Err("Region must be specified".to_string()));
+    }
+    #[test]
+    fn access_key_id_is_required() {
+        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+
+        let res = PostPolicy::default()
+            .set_bucket_name(&BUCKET)
+            .set_region(&REGION)
+            .set_secret_access_key(SECRET_ACCESS_KEY)
+            .set_key(OBJECT_KEY)
+            .set_expiration(&expiration_date)
+            .build_form_data();
+
+        assert_eq!(res, Err("Access key id must be specified".to_string()));
+    }
+
+    #[test]
+    fn secret_access_key_is_required() {
+        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+
+        let res = PostPolicy::default()
+            .set_bucket_name(&BUCKET)
+            .set_region(&REGION)
+            .set_access_key_id(ACCESS_KEY_ID)
+            .set_key(OBJECT_KEY)
+            .set_expiration(&expiration_date)
+            .build_form_data();
+
+        assert_eq!(res, Err("Secret access key must be specified".to_string()));
+    }
+
+    #[test]
+    fn expiration_is_required() {
+        let res = PostPolicy::default()
+            .set_bucket_name(&BUCKET)
+            .set_region(&REGION)
+            .set_access_key_id(ACCESS_KEY_ID)
+            .set_key(OBJECT_KEY)
+            .build_form_data();
+
+        assert_eq!(res, Err("Expiration date must be specified".to_string()));
+    }
+    #[test]
+    fn build_successfully() {
+        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+
+        let res = PostPolicy::default()
+            .set_bucket_name(BUCKET)
+            .set_region(&REGION)
+            .set_access_key_id(ACCESS_KEY_ID)
+            .set_secret_access_key(SECRET_ACCESS_KEY)
+            .set_key(OBJECT_KEY)
+            .set_expiration(&expiration_date)
+            .set_content_length_range(123, 456)
+            .build_form_data();
+
+        assert!(res.is_ok());
+        let (upload_url, form_data) = res.unwrap();
+        assert_eq!(
+            upload_url,
+            "https://the-bucket.s3.eu-central-1.amazonaws.com"
+        );
+        assert_eq!(form_data.get("key").unwrap(), "the-object-key");
+
+        assert_eq!(form_data.get("bucket").unwrap(), "the-bucket");
+        assert_eq!(
+            form_data.get("x-amz-algorithm").unwrap(),
+            "AWS4-HMAC-SHA256"
+        );
+        assert_eq!(
+            form_data.get("x-amz-credential").unwrap(),
+            "foo_access_key/20200101/eu-central-1/s3/aws4_request"
+        );
+        assert_eq!(form_data.get("x-amz-date").unwrap(), "20200101T000000Z");
+
+        let expected_policy = serde_json::json!({
+            "expiration": "2020-01-01T01:02:03.000Z",
+            "conditions": [
+                ["eq", "$bucket", "the-bucket"],
+                ["eq", "$key", "the-object-key"],
+                ["eq", "$x-amz-date", "20200101T000000Z"],
+                ["eq", "$x-amz-algorithm", "AWS4-HMAC-SHA256"],
+                ["eq", "$x-amz-credential", "foo_access_key/20200101/eu-central-1/s3/aws4_request"],
+                ["content-length-range", 123, 456]
+            ]
+        });
+
+        let policy_as_base64 = form_data.get("policy").unwrap();
+        let policy_as_vec_u8 = base64::decode(policy_as_base64).unwrap();
+        let policy: serde_json::Value = serde_json::from_slice(&policy_as_vec_u8).unwrap();
+        assert_eq!(policy, expected_policy);
+    }
+
+    #[test]
+    fn set_content_type() {
+        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+
+        let res = PostPolicy::default()
+            .set_content_type("some/type")
+            .set_bucket_name(BUCKET)
+            .set_region(&REGION)
+            .set_access_key_id(ACCESS_KEY_ID)
+            .set_secret_access_key(SECRET_ACCESS_KEY)
+            .set_key(OBJECT_KEY)
+            .set_expiration(&expiration_date)
+            .build_form_data();
+
+        assert!(res.is_ok());
+
+        let (_, form_data) = res.unwrap();
+        dbg!(&form_data);
+        assert_eq!(form_data.get("Content-Type").unwrap(), "some/type");
+
+        let policy_as_base64 = form_data.get("policy").unwrap();
+        let policy_as_vec_u8 = base64::decode(policy_as_base64).unwrap();
+        let policy: serde_json::Value = serde_json::from_slice(&policy_as_vec_u8).unwrap();
+        let conditions = policy["conditions"].as_array().unwrap();
+        assert!(conditions.contains(&serde_json::json!(["eq", "$Content-Type", "some/type"])));
+    }
+
+    #[test]
+    fn append_policy() {
+        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+
+        let res = PostPolicy::default()
+            .append_policy("a", "b", "c")
+            .set_bucket_name(BUCKET)
+            .set_region(&REGION)
+            .set_access_key_id(ACCESS_KEY_ID)
+            .set_secret_access_key(SECRET_ACCESS_KEY)
+            .set_key(OBJECT_KEY)
+            .set_expiration(&expiration_date)
+            .build_form_data();
+
+        let (_, form_data) = res.unwrap();
+
+        assert_eq!(form_data.get("a"), None);
+
+        let policy_as_base64 = form_data.get("policy").unwrap();
+        let policy_as_vec_u8 = base64::decode(policy_as_base64).unwrap();
+        let policy: serde_json::Value = serde_json::from_slice(&policy_as_vec_u8).unwrap();
+        let conditions = policy["conditions"].as_array().unwrap();
+        assert!(conditions.contains(&serde_json::json!(["a", "b", "c"])));
+    }
+
+    #[test]
+    fn set_key_startswith() {
+        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+
+        let res = PostPolicy::default()
+            .set_key_startswith("foo")
+            .set_bucket_name(BUCKET)
+            .set_region(&REGION)
+            .set_access_key_id(ACCESS_KEY_ID)
+            .set_secret_access_key(SECRET_ACCESS_KEY)
+            .set_expiration(&expiration_date)
+            .build_form_data();
+
+        let (_, form_data) = res.unwrap();
+        dbg!(&form_data);
+        assert_eq!(form_data.get("key").unwrap(), "foo");
+
+        let policy_as_base64 = form_data.get("policy").unwrap();
+        let policy_as_vec_u8 = base64::decode(policy_as_base64).unwrap();
+        let policy: serde_json::Value = serde_json::from_slice(&policy_as_vec_u8).unwrap();
+        let conditions = policy["conditions"].as_array().unwrap();
+        assert!(conditions.contains(&serde_json::json!(["starts-with", "$key", "foo"])));
     }
 }

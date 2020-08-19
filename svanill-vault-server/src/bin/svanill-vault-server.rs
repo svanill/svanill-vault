@@ -64,6 +64,26 @@ struct Opt {
         env = "SVANILL_VAULT_URL_DURATION"
     )]
     presigned_url_duration_in_min: u32,
+    /// Verbose mode (-v, -vv)
+    #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
+    verbose: u8,
+    /// Display only warn/error. Takes precedence over --verbose
+    #[structopt(short = "q", long = "quiet")]
+    quiet: bool,
+}
+
+fn setup_log(level: Option<log::Level>) {
+    let mut rust_log = env::var("RUST_LOG").unwrap_or_default();
+
+    if let Some(level) = level {
+        rust_log.push_str(&format!(
+            ",{level},rusoto={level},actix_cors={level},actix_rt={level},actix_http={level},actix_web={level},actix_server={level}",
+            level = level
+        ));
+    }
+
+    env::set_var("RUST_LOG", rust_log);
+    env_logger::init();
 }
 
 #[actix_rt::main]
@@ -71,13 +91,17 @@ async fn main() -> Result<()> {
     #[cfg(debug_assertions)]
     color_backtrace::install();
 
-    env::set_var(
-        "RUST_LOG",
-        "info,rusoto=warn,actix_http=debug,actix_web=debug,actix_server=info",
-    );
-    env_logger::init();
-
     let opt = Opt::from_args();
+
+    setup_log(if opt.verbose == 1 {
+        Some(log::Level::Debug)
+    } else if opt.verbose == 2 {
+        Some(log::Level::Trace)
+    } else if opt.quiet {
+        Some(log::Level::Warn)
+    } else {
+        None
+    });
 
     if let Some(region) = opt.s3_region {
         env::set_var("AWS_DEFAULT_REGION", region);
