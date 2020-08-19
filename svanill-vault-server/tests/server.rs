@@ -8,9 +8,9 @@ use diesel::{
 use r2d2::Pool;
 use ring::hmac;
 use ring::test::rand::FixedByteRandom;
-use rusoto_core::Region;
 use rusoto_credential::AwsCredentials;
 use rusoto_mock::{MockCredentialsProvider, MockRequestDispatcher};
+use rusoto_signature::region::Region;
 use std::net::TcpListener;
 use svanill_vault_server::auth::auth_token::AuthToken;
 use svanill_vault_server::auth::tokens_cache::TokensCache;

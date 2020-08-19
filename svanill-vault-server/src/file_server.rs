@@ -3,13 +3,14 @@ use crate::rusoto_extra::PostPolicy;
 use chrono::Utc;
 use futures::future::try_join_all;
 use rusoto_core::request::TlsError;
-use rusoto_core::{HttpClient, Region, RusotoError};
+use rusoto_core::{HttpClient, RusotoError};
 use rusoto_credential::{AwsCredentials, ChainProvider, CredentialsError, ProvideAwsCredentials};
 use rusoto_s3::util::{PreSignedRequest, PreSignedRequestOption};
 use rusoto_s3::{
     DeleteObjectError, DeleteObjectRequest, GetObjectRequest, HeadObjectError, HeadObjectRequest,
     ListObjectsV2Request, S3Client, S3,
 };
+use rusoto_signature::region::Region;
 use std::default::Default;
 use std::{collections::HashMap, ops::Add};
 use thiserror::Error;

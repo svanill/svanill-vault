@@ -2,7 +2,7 @@ use anyhow::Result;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use ring::{hmac, rand};
-use rusoto_core::Region;
+use rusoto_signature::region::Region;
 use std::env;
 use std::net::TcpListener;
 use structopt::StructOpt;

@@ -1,7 +1,6 @@
 use chrono::Datelike;
 use chrono::{DateTime, Utc};
-use rusoto_core::Region;
-use rusoto_signature::signature::SignedRequest;
+use rusoto_signature::{region::Region, signature::SignedRequest};
 use serde::ser::{Serialize, SerializeSeq, Serializer};
 use std::collections::HashMap;
 use time::Date;
