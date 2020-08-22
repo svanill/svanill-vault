@@ -8,6 +8,7 @@ license = "AGPL-3.0-or-later"
 readme = "README.md"
 
 [dependencies]
+svanill-vault-openapi = { path = "../svanill-vault-openapi", version = "0.1" }
 actix-web = { version = "2.0.0", features = ["rustls"] }
 actix-rt = "1.1.1"
 env_logger = "0.7.1"

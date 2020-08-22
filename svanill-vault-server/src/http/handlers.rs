@@ -4,12 +4,6 @@ use crate::auth::auth_token::AuthToken;
 use crate::auth::tokens_cache::TokensCache;
 use crate::auth::Username;
 use crate::file_server;
-use crate::openapi_models::{
-    AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
-    GetStartingEndpointsResponse, RemoveFileResponse, RequestUploadUrlRequestBody,
-    RequestUploadUrlResponse, RetrieveListOfUserFilesResponse,
-    RetrieveListOfUserFilesResponseContentItemContent,
-};
 use crate::{db, errors::VaultError};
 use actix_http::ResponseError;
 use actix_web::body::Body;
@@ -23,6 +17,12 @@ use diesel::r2d2::{self, ConnectionManager};
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::{Arc, RwLock};
+use svanill_vault_openapi::{
+    AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
+    GetStartingEndpointsResponse, RemoveFileResponse, RequestUploadUrlRequestBody,
+    RequestUploadUrlResponse, RetrieveListOfUserFilesResponse,
+    RetrieveListOfUserFilesResponseContentItemContent,
+};
 
 type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
 

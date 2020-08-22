@@ -2578,6 +2578,7 @@ dependencies = [
  "serde_json",
  "sha2 0.8.2",
  "structopt",
+ "svanill-vault-openapi",
  "thiserror",
  "time 0.2.16",
  "tokio",

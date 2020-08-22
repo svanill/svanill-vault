@@ -1,4 +1,3 @@
-use crate::openapi_models::RetrieveListOfUserFilesResponseContentItemContent;
 use crate::rusoto_extra::PostPolicy;
 use chrono::Utc;
 use futures::future::try_join_all;
@@ -13,6 +12,7 @@ use rusoto_s3::{
 use rusoto_signature::region::Region;
 use std::default::Default;
 use std::{collections::HashMap, ops::Add};
+use svanill_vault_openapi::RetrieveListOfUserFilesResponseContentItemContent;
 use thiserror::Error;
 
 type FileDTO = RetrieveListOfUserFilesResponseContentItemContent;

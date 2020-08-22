@@ -12,18 +12,15 @@ use rusoto_credential::AwsCredentials;
 use rusoto_mock::{MockCredentialsProvider, MockRequestDispatcher};
 use rusoto_signature::region::Region;
 use std::net::TcpListener;
+use svanill_vault_openapi::{
+    AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
+    GetStartingEndpointsResponse, RemoveFileResponse, RequestUploadUrlRequestBody,
+    RequestUploadUrlResponse, RetrieveListOfUserFilesResponse,
+};
 use svanill_vault_server::auth::auth_token::AuthToken;
 use svanill_vault_server::auth::tokens_cache::TokensCache;
 use svanill_vault_server::errors::ApiError;
-use svanill_vault_server::{
-    file_server,
-    openapi_models::{
-        AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
-        GetStartingEndpointsResponse, RemoveFileResponse, RequestUploadUrlRequestBody,
-        RequestUploadUrlResponse, RetrieveListOfUserFilesResponse,
-    },
-    server::AppData,
-};
+use svanill_vault_server::{file_server, server::AppData};
 
 #[macro_use]
 extern crate diesel_migrations;
