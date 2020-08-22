@@ -1,8 +1,8 @@
 use crate::config::Config;
-use crate::models::{
+use crate::sdk::response_error::SdkError;
+use svanill_vault_openapi::{
     AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
 };
-use crate::sdk::response_error::SdkError;
 
 pub fn request_challenge(conf: &Config) -> Result<String, SdkError> {
     let client = reqwest::blocking::Client::new();

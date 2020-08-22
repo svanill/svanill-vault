@@ -21,14 +21,6 @@ Defaults have been choosen to reduce command line options in day to day use and 
 
 ## Build
 
-You need to first generate some files from the openapi specifications.
-
-```
-./regenerate_models.sh
-```
-
-Then as usual
-
 ```
 cargo build
 ```

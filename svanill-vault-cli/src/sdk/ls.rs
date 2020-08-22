@@ -1,8 +1,8 @@
 use crate::config::Config;
-use crate::models::{
+use crate::sdk::response_error::SdkError;
+use svanill_vault_openapi::{
     RetrieveListOfUserFilesResponse, RetrieveListOfUserFilesResponseContentItemContent,
 };
-use crate::sdk::response_error::SdkError;
 
 pub fn ls(
     conf: &Config,

@@ -1,11 +1,11 @@
 use crate::config::Config;
-use crate::models::{
-    HateoasFileUploadUrl, RemoveFileResponse, RequestUploadUrlRequestBody,
-    RequestUploadUrlResponse, RequestUploadUrlResponseLinks,
-};
 use crate::sdk::response_error::SdkError;
 use md5::{Digest, Md5};
 use std::{collections::HashMap, io::Read};
+use svanill_vault_openapi::{
+    HateoasFileUploadUrl, RemoveFileResponse, RequestUploadUrlRequestBody,
+    RequestUploadUrlResponse, RequestUploadUrlResponseLinks,
+};
 
 pub fn retrieve(url: &str) -> Result<impl Read, SdkError> {
     let client = reqwest::blocking::Client::new();

@@ -10,9 +10,9 @@ use svanill_vault_cli::config::Config;
 use svanill_vault_cli::utils::gen_random_filename;
 use svanill_vault_cli::{
     commands::pull::sanitize_possible_filename,
-    models::RetrieveListOfUserFilesResponseContentItemContent,
     sdk::{answer_challenge, delete, ls, request_challenge, request_upload_url, retrieve, upload},
 };
+use svanill_vault_openapi::RetrieveListOfUserFilesResponseContentItemContent;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
