@@ -73,16 +73,17 @@ struct Opt {
 }
 
 fn setup_log(level: Option<log::Level>) {
-    let mut rust_log = env::var("RUST_LOG").unwrap_or_default();
-
     if let Some(level) = level {
+        let mut rust_log = env::var("RUST_LOG").unwrap_or_default();
+
         rust_log.push_str(&format!(
             ",{level},rusoto={level},actix_cors={level},actix_rt={level},actix_http={level},actix_web={level},actix_server={level}",
             level = level
         ));
+
+        env::set_var("RUST_LOG", rust_log);
     }
 
-    env::set_var("RUST_LOG", rust_log);
     env_logger::init();
 }
 
@@ -110,6 +111,8 @@ async fn main() -> Result<()> {
         Some(log::Level::Trace)
     } else if opt.quiet {
         Some(log::Level::Warn)
+    } else if env::var_os("RUST_LOG").unwrap_or_default().is_empty() {
+        Some(log::Level::Info)
     } else {
         None
     });
