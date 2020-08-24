@@ -91,6 +91,17 @@ async fn main() -> Result<()> {
     #[cfg(debug_assertions)]
     color_backtrace::install();
 
+    if std::env::var_os("SENTRY_DSN").is_none() {
+        log::warn!("Env var SENTRY_DSN not set, Sentry won't be initialized");
+    }
+
+    // Note: requires env SENTRY_DSN to be properly set to become active
+    let _guard = sentry::init(sentry::ClientOptions {
+        release: Some(format!("svanill-vault-server@{}", std::env!("GIT_HASH")).into()),
+        attach_stacktrace: true,
+        ..Default::default()
+    });
+
     let opt = Opt::from_args();
 
     setup_log(if opt.verbose == 1 {
