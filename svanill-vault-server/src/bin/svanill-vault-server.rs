@@ -33,6 +33,9 @@ struct Opt {
         parse(from_os_str)
     )]
     db_path: std::path::PathBuf,
+    /// Uri to downlaod the SQLITE db. Requires -d to store it there
+    #[structopt(long = "sqlite-initial-db-url", env = "SVANILL_VAULT_DB_DL_URL")]
+    db_download_url: Option<String>,
     /// Authorization Token timeout in minutes
     #[structopt(
         short = "t",
@@ -92,6 +95,16 @@ fn setup_log(level: Option<log::Level>) {
     env_logger::init();
 }
 
+async fn download_file(url: &str, path: &std::path::PathBuf) -> Result<()> {
+    let res = reqwest::get(url).await?;
+    let res = res.error_for_status()?;
+    let bytes = res.bytes().await?;
+    let mut bytes_as_u8 = bytes.as_ref();
+    let mut file = std::fs::File::create(path)?;
+    std::io::copy(&mut bytes_as_u8, &mut file)?;
+    Ok(())
+}
+
 #[actix_rt::main]
 async fn main() -> Result<()> {
     #[cfg(debug_assertions)]
@@ -149,6 +162,11 @@ async fn main() -> Result<()> {
         std::time::Duration::from_secs(opt.presigned_url_duration_in_min as u64 * 60),
     )
     .await?;
+
+    // download the SQLite db, if asked to
+    if let Some(db_download_url) = opt.db_download_url {
+        download_file(&db_download_url, &opt.db_path).await.expect("could not download db");
+    }
 
     // set up database connection pool
     let connspec = opt.db_path;
