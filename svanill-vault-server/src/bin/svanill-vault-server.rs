@@ -25,9 +25,14 @@ struct Opt {
     /// Server port
     #[structopt(short = "P", default_value = "8080", env = "SVANILL_VAULT_PORT")]
     port: u16,
-    /// Database url
-    #[structopt(short = "d", default_value = "vault.db", env = "SVANILL_VAULT_DB")]
-    db_url: String,
+    /// SQLITE Database path
+    #[structopt(
+        short = "d",
+        default_value = "vault.db",
+        env = "SVANILL_VAULT_DB",
+        parse(from_os_str)
+    )]
+    db_path: std::path::PathBuf,
     /// Authorization Token timeout in minutes
     #[structopt(
         short = "t",
@@ -146,8 +151,10 @@ async fn main() -> Result<()> {
     .await?;
 
     // set up database connection pool
-    let connspec = opt.db_url;
-    let manager = ConnectionManager::<SqliteConnection>::new(connspec);
+    let connspec = opt.db_path;
+    let manager = ConnectionManager::<SqliteConnection>::new(
+        connspec.to_str().expect("Cannot convert db_path to string"),
+    );
     let pool = r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create database connection pool");
