@@ -123,11 +123,9 @@ impl From<&VaultError> for ApiError {
                 1023,
                 String::from("Internal Server Error"),
             ),
-            VaultError::PolicyDataError(e) => ApiError::new(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                1025,
-                e.to_string(),
-            ),
+            VaultError::PolicyDataError(e) => {
+                ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, 1025, e.to_string())
+            }
         }
     }
 }

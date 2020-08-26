@@ -165,7 +165,9 @@ async fn main() -> Result<()> {
 
     // download the SQLite db, if asked to
     if let Some(db_download_url) = opt.db_download_url {
-        download_file(&db_download_url, &opt.db_path).await.expect("could not download db");
+        download_file(&db_download_url, &opt.db_path)
+            .await
+            .expect("could not download db");
     }
 
     // set up database connection pool
