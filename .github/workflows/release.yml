@@ -1,0 +1,176 @@
+name: Build, bump tag version and release
+
+on:
+  push:
+    branches:
+      - release
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  verify-tests-and-formatting:
+    name: Run tests and check formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: "0"
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          components: rustfmt, clippy
+
+      - name: Run cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+      - name: Run cargo clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --workspace --bins --examples --tests --benches -- -D warnings
+
+      - name: Run cargo tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace --bins --examples --tests --benches
+
+  dist:
+    needs: verify-tests-and-formatting
+    name: dist
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --locked
+
+      - name: Strip release binary (linux/macos)
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+        run: |
+          strip target/release/svanill-vault-cli
+          strip target/release/svanill-vault-server
+
+      - name: Upload artifacts (linux/macos)
+        if: matrix.os != 'windows-latest'
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist-${{ matrix.os }}
+          path: |
+            target/release/svanill-vault-cli
+            target/release/svanill-vault-server
+
+      - name: Upload artifacts (windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist-${{ matrix.os }}
+          path: |
+            target/release/svanill-vault-cli.exe
+            target/release/svanill-vault-server.exe
+
+  release:
+    needs: dist
+    name: Release
+    strategy:
+      matrix:
+        crate: [svanill-vault-cli, svanill-vault-server]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ matrix.crate }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: "0"
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - uses: actions/download-artifact@v2
+        with:
+          path: dist
+
+      - name: List dist files
+        run: ls -R
+        working-directory: dist
+
+      - name: Get version from Cargo.toml
+        id: version-by-cargo
+        run: |
+          echo "::set-output name=version::${{ matrix.crate }}-$(cargo metadata --offline --no-deps --format-version=1 | jq --raw-output '.packages[0].version')"
+
+      - name: Is already tagged?
+        id: is-new-version
+        run: |
+          echo "::set-output name=result::$(test $(git tag --list ${{ steps.version-by-cargo.outputs.version }}) && echo "" || echo ${{ steps.version-by-cargo.outputs.version }})"
+
+      - name: Push tag/create release point
+        if: steps.is-new-version.outputs.result != ''
+        uses: anothrNick/github-tag-action@1.17.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CUSTOM_TAG: ${{ steps.is-new-version.outputs.result }}
+
+      - name: Release linux binary
+        if: steps.is-new-version.outputs.result != ''
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/dist-ubuntu-latest/${{ matrix.crate }}
+          asset_name: ${{ matrix.crate }}-x86_64-unknown-linux-gnu
+          tag: ${{ steps.is-new-version.outputs.result }}
+          release_name: ${{ steps.is-new-version.outputs.result }}
+          overwrite: true
+
+      - name: Release windows binary
+        if: steps.is-new-version.outputs.result != ''
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/dist-windows-latest/${{ matrix.crate }}.exe
+          asset_name: ${{ matrix.crate }}-x86_64-pc-windows-msvc.exe
+          tag: ${{ steps.is-new-version.outputs.result }}
+          release_name: ${{ steps.is-new-version.outputs.result }}
+          overwrite: true
+
+      - name: Release macos binary
+        if: steps.is-new-version.outputs.result != ''
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/dist-macos-latest/${{ matrix.crate }}
+          asset_name: ${{ matrix.crate }}-x86_64-apple-darwin
+          tag: ${{ steps.is-new-version.outputs.result }}
+          release_name: ${{ steps.is-new-version.outputs.result }}
+          overwrite: true
