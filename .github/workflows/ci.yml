@@ -46,6 +46,11 @@ jobs:
           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('Cargo.lock') }}
       - uses: actions-rs/cargo@v1
         with:
+          command: build
+      - name: Check that we didn't introduce native ssl
+        run: ! ldd ../target/debug/svanill-vault-cli | grep -q libssl
+      - uses: actions-rs/cargo@v1
+        with:
           command: test
 
   fmt:
