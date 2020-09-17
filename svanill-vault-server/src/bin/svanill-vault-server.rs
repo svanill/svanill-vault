@@ -105,7 +105,7 @@ async fn download_file(url: &str, path: &std::path::PathBuf) -> Result<()> {
     Ok(())
 }
 
-#[actix_rt::main]
+#[actix_web::main]
 async fn main() -> Result<()> {
     #[cfg(debug_assertions)]
     color_backtrace::install();
