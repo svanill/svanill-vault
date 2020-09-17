@@ -9,11 +9,10 @@ use anyhow::Result;
 use std::sync::{Arc, RwLock};
 
 fn validate_token(
-    tokens_cache: web::Data<Arc<RwLock<TokensCache>>>,
+    tokens_cache: &web::Data<Arc<RwLock<TokensCache>>>,
     token: AuthToken,
 ) -> Option<Username> {
     tokens_cache
-        .as_ref()
         .write()
         .unwrap() // PANIC on token's lock poisoned
         .get_username(&token)
@@ -24,7 +23,7 @@ pub async fn auth_validator(
     req: ServiceRequest,
     credentials: BearerAuth,
 ) -> Result<ServiceRequest, Error> {
-    let maybe_tokens_cache = req.app_data::<Arc<RwLock<TokensCache>>>();
+    let maybe_tokens_cache = req.app_data::<web::Data<Arc<RwLock<TokensCache>>>>();
     let tokens_cache =
         maybe_tokens_cache.expect("the tokens_cache have not been setup to this route");
 
