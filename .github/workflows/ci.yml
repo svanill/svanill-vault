@@ -1,7 +1,7 @@
 name: Continuous integration
 
 on:
-  push:
+  pull_request:
     branches-ignore:
       - release
 
@@ -48,7 +48,7 @@ jobs:
         with:
           command: build
       - name: Check that we didn't introduce native ssl
-        run: ! ldd ../target/debug/svanill-vault-cli | grep -q libssl
+        run: '! ldd ../target/debug/svanill-vault-cli | grep -q libssl'
       - uses: actions-rs/cargo@v1
         with:
           command: test
