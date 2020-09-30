@@ -1,6 +1,8 @@
 use crate::rusoto_extra::PostPolicy;
 use chrono::Utc;
 use futures::future::try_join_all;
+use hyper::client::HttpConnector;
+use hyper_rustls::HttpsConnector;
 use rusoto_core::request::TlsError;
 use rusoto_core::{HttpClient, RusotoError};
 use rusoto_credential::{AwsCredentials, ChainProvider, CredentialsError, ProvideAwsCredentials};
@@ -52,7 +54,18 @@ impl FileServer {
 
         let credentials = chain.credentials().await?;
 
-        let client = S3Client::new_with(HttpClient::new()?, chain, region.clone());
+        let mut config = rustls::ClientConfig::new();
+        config
+            .root_store
+            .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
+
+        let mut http = HttpConnector::new();
+        http.enforce_http(false);
+
+        let tls_connector = HttpsConnector::from((http, config));
+        let http_client = HttpClient::from_connector(tls_connector);
+
+        let client = S3Client::new_with(http_client, chain, region.clone());
 
         Ok(FileServer {
             region,
