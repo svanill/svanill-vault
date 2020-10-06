@@ -18,3 +18,11 @@ git add openapi3.yml
 git add src/models
 git commit -m ...
 ```
+
+## FAQ
+
+- why don't you use the generated client and server too?
+
+When I tried last time the server failed to generate, and the client was a bit in a flux because of async support.
+
+Will try again when openapi-generator is more mature.
