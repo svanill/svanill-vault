@@ -4,16 +4,16 @@ A command line client for svanill-vault
 
 ## Example usage
 
-```
-> echo "this is just a test" > some_file
-> svanill-vault-cli push some_file
-> svanill-vault-cli ls
-> rm some_file
-> svanill-vault-cli pull some_file
-> cat some_file
-> svanill-vault-cli rm some_file
-> svanill-vault-cli ls
-> cat some_file
+```bash
+$ echo "this is just a test" > some_file
+$ svanill-vault-cli push some_file
+$ svanill-vault-cli ls
+$ rm some_file
+$ svanill-vault-cli pull some_file
+$ cat some_file
+$ svanill-vault-cli rm some_file
+$ svanill-vault-cli ls
+$ cat some_file
 ```
 
 You can change destination filenames with command line options.
