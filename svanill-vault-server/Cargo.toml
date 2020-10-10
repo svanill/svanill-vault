@@ -1,5 +1,6 @@
 [package]
 name = "svanill-vault-server"
+description = "svanill-vault, the server"
 version = "0.1.0"
 authors = ["Riccardo Attilio Galli <riccardo@sideralis.org>"]
 repository = "https://github.com/svanill/svanill-vault-server"

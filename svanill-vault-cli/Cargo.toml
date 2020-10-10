@@ -1,5 +1,6 @@
 [package]
 name = "svanill-vault-cli"
+description = "A command line tool to access svanill-vault"
 version = "0.1.0"
 authors = ["Riccardo Attilio Galli <riccardo@sideralis.org>"]
 edition = "2018"
