@@ -93,6 +93,50 @@ jobs:
             target/release/svanill-vault-cli.exe
             target/release/svanill-vault-server.exe
 
+  docker-image:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: riquito
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: "0"
+
+      - uses: actions/download-artifact@v2
+        with:
+          path: dist
+
+      - name: Build the docker image
+        run: |
+          cp dist/dist-ubuntu-latest/svanill-vault-cli docker/
+          cp dist/dist-ubuntu-latest/svanill-vault-server docker/
+          cd docker
+          docker build -t ghcr.io/riquito/svanill-vault-server:latest .
+          docker push ghcr.io/riquito/svanill-vault-server:latest
+
+      - name: Get server version from Cargo.toml
+        id: server-version-by-cargo
+        run: |
+          echo "::set-output name=version::$(cargo metadata --offline --no-deps --format-version=1 | jq --raw-output '.packages[] | select(.name == "svanill-vault-server").version')"
+
+      - name: Is a new release?
+        id: is-new-version
+        run: |
+          echo "::set-output name=result::$(test $(git tag --list svanill-vault-server-${{ steps.server-version-by-cargo.outputs.version }}) && echo "" || echo ${{ steps.server-version-by-cargo.outputs.version }})"
+
+      - name: Tag the docker image with the new version
+        if: steps.is-new-version.outputs.result != ''
+        run: |
+          docker tag ghcr.io/riquito/svanill-vault-server:latest ghcr.io/riquito/svanill-vault-server:${{ steps.server-version-by-cargo.outputs.version }}
+          docker push ghcr.io/riquito/svanill-vault-server:${{ steps.server-version-by-cargo.outputs.version }}
+
   release:
     needs: dist
     name: Release
@@ -128,9 +172,9 @@ jobs:
       - name: Get version from Cargo.toml
         id: version-by-cargo
         run: |
-          echo "::set-output name=version::${{ matrix.crate }}-$(cargo metadata --offline --no-deps --format-version=1 | jq --raw-output '.packages[0].version')"
+          echo "::set-output name=version::${{ matrix.crate }}-$(cargo metadata --offline --no-deps --format-version=1 | jq --raw-output '.packages[] | select(.name == "${{ matrix.crate }}").version')"
 
-      - name: Is already tagged?
+      - name: Is a new release?
         id: is-new-version
         run: |
           echo "::set-output name=result::$(test $(git tag --list ${{ steps.version-by-cargo.outputs.version }}) && echo "" || echo ${{ steps.version-by-cargo.outputs.version }})"
