@@ -118,8 +118,11 @@ impl FileServer {
 
                     let url = self.get_presigned_retrieve_url(key.clone());
 
+                    let (_, filename) = split_object_key(&username, &key)
+                        .expect("object key does not match user prefix");
+
                     Ok::<FileDTO, FileServerError>(FileDTO {
-                        filename: key,
+                        filename: filename.to_owned(),
                         checksum: etag,
                         size: size as i32,
                         url,
@@ -144,7 +147,7 @@ impl FileServer {
         Ok(())
     }
 
-    pub fn get_presigned_retrieve_url(&self, key: String) -> String {
+    fn get_presigned_retrieve_url(&self, key: String) -> String {
         GetObjectRequest {
             bucket: self.bucket.clone(),
             key,
@@ -191,6 +194,16 @@ impl FileServer {
 
 fn build_object_key(username: &str, filename: &str) -> String {
     format!("users/{}/{}", username, filename)
+}
+
+fn split_object_key<'a>(username: &str, key: &'a str) -> Option<(&'a str, &'a str)> {
+    let prefix_len = "users/".len() + username.len() + "/".len();
+
+    if prefix_len > key.len() {
+        None
+    } else {
+        Some(key.split_at(prefix_len))
+    }
 }
 
 #[cfg(test)]
