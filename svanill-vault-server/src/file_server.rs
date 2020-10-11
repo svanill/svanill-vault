@@ -147,7 +147,7 @@ impl FileServer {
         Ok(())
     }
 
-    pub fn get_presigned_retrieve_url(&self, key: String) -> String {
+    fn get_presigned_retrieve_url(&self, key: String) -> String {
         GetObjectRequest {
             bucket: self.bucket.clone(),
             key,
