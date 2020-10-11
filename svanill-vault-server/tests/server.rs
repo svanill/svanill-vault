@@ -501,14 +501,14 @@ async fn list_user_files_ok() {
           <MaxKeys>3</MaxKeys>
           <IsTruncated>false</IsTruncated>
           <Contents>
-            <Key>some_object_1.txt</Key>
+            <Key>users/test_user_2/some_object_1.txt</Key>
             <LastModified>2013-09-17T18:07:53.000Z</LastModified>
             <ETag>"599bab3ed2c697f1d26842727561fd94"</ETag>
             <Size>857</Size>
             <StorageClass>REDUCED_REDUNDANCY</StorageClass>
           </Contents>
           <Contents>
-            <Key>some_object_2.txt</Key>
+            <Key>users/test_user_2/any/path/is/ok.txt</Key>
             <LastModified>2013-09-17T18:07:53.000Z</LastModified>
             <ETag>"d26842727561fd94599bab3ed2c697f1"</ETag>
             <Size>346</Size>
@@ -540,6 +540,25 @@ async fn list_user_files_ok() {
 
     assert_eq!(200, json_resp.status);
     assert_eq!(2, json_resp.content.len());
+    assert_eq!("some_object_1.txt", json_resp.content[0].content.filename);
+    assert_eq!(
+        "\"599bab3ed2c697f1d26842727561fd94\"",
+        json_resp.content[0].content.checksum
+    );
+    assert_eq!(857, json_resp.content[0].content.size);
+    assert!(json_resp.content[0].content.url.starts_with(
+        "https://s3.eu-central-1.amazonaws.com/test_bucket/users/test_user_2/some_object_1.txt"
+    ));
+
+    assert_eq!("any/path/is/ok.txt", json_resp.content[1].content.filename);
+    assert_eq!(
+        "\"d26842727561fd94599bab3ed2c697f1\"",
+        json_resp.content[1].content.checksum
+    );
+    assert_eq!(346, json_resp.content[1].content.size);
+    assert!(json_resp.content[1].content.url.starts_with(
+        "https://s3.eu-central-1.amazonaws.com/test_bucket/users/test_user_2/any/path/is/ok.txt"
+    ));
 }
 
 #[actix_rt::test]
