@@ -4,6 +4,9 @@ on:
   pull_request:
     branches-ignore:
       - release
+  push:
+    branches:
+      - master
 
 jobs:
   check:
