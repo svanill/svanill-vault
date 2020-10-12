@@ -94,6 +94,7 @@ jobs:
             target/release/svanill-vault-server.exe
 
   docker-image:
+    needs: dist
     name: Build
     runs-on: ubuntu-latest
     steps:
