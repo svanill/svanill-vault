@@ -1,3 +1,5 @@
+![Continuous integration](https://github.com/svanill/svanill-vault/workflows/Continuous%20integration/badge.svg)
+
 # [svanill-vault-server](./svanill-vault-server)
 
 svanill-vault, the server
