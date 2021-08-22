@@ -10,7 +10,7 @@ on:
 
 jobs:
   check:
-    name: Check
+    name: cargo check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -21,17 +21,15 @@ jobs:
           override: true
       - name: Cache dependencies
         uses: actions/cache@v2
-        env:
-          cache-name: cache-target-directory
         with:
           path: target
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-build-${{ hashFiles('Cargo.lock') }}
       - uses: actions-rs/cargo@v1
         with:
           command: check
 
   test:
-    name: Test Suite
+    name: cargo test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -42,22 +40,20 @@ jobs:
           override: true
       - name: Cache dependencies
         uses: actions/cache@v2
-        env:
-          cache-name: cache-target-directory
         with:
           path: target
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-build-${{ hashFiles('Cargo.lock') }}
       - uses: actions-rs/cargo@v1
         with:
           command: build
       - name: Check that we didn't introduce native ssl
-        run: '! ldd ../target/debug/svanill-vault-cli | grep -q libssl'
+        run: "! ldd ../target/debug/svanill-vault-cli | grep -q libssl"
       - uses: actions-rs/cargo@v1
         with:
           command: test
 
   fmt:
-    name: Rustfmt
+    name: cargo fmt
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -73,7 +69,7 @@ jobs:
           args: --all -- --check
 
   clippy:
-    name: Clippy
+    name: cargo clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
