@@ -9,77 +9,58 @@ on:
       - master
 
 jobs:
-  check:
-    name: cargo check
+  build-and-test:
+    name: build and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Cache dependencies
-        uses: actions/cache@v2
-        with:
-          path: target
-          key: ${{ runner.os }}-build-${{ hashFiles('Cargo.lock') }}
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
 
-  test:
-    name: cargo test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
-      - name: Cache dependencies
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: default # contains rustfmt, clippy
+          toolchain: nightly
+
+      - name: Setup cache (and restore immediately if there's a key match)
         uses: actions/cache@v2
         with:
-          path: target
-          key: ${{ runner.os }}-build-${{ hashFiles('Cargo.lock') }}
-      - uses: actions-rs/cargo@v1
+          path: |
+            target
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git
+          # don't use Cargo.lock hash in the key, so we can change it
+          # and still reuse most deps
+          key: ${{ runner.os }}-build
+
+      - name: cargo build
+        uses: actions-rs/cargo@v1
         with:
           command: build
+
       - name: Check that we didn't introduce native ssl
         run: "! ldd ../target/debug/svanill-vault-cli | grep -q libssl"
-      - uses: actions-rs/cargo@v1
+
+      - name: cargo test
+        uses: actions-rs/cargo@v1
         with:
           command: test
 
-  fmt:
-    name: cargo fmt
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-      - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
+      - name: cargo fmt
+        uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: --all -- --check
-
-  clippy:
-    name: cargo clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
           toolchain: nightly
-          override: true
-      - run: rustup component add clippy
-      - uses: actions-rs/cargo@v1
+
+      - name: cargo clippy
+        uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: --all-targets --all-features
+          toolchain: nightly
