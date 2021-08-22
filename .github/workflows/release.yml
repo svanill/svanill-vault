@@ -27,23 +27,14 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - name: cargo test
+        run: cargo test --workspace --bins --examples --tests --benches
 
-      - name: Run cargo clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --workspace --bins --examples --tests --benches -- -D warnings
+      - name: cargo fmt
+        run: cargo +nightly fmt --all -- --check
 
-      - name: Run cargo tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --workspace --bins --examples --tests --benches
+      - name: cargo clippy
+        run: cargo +nightly clippy --all-targets --all-features --workspace --bins --examples --tests --benches -- -D warnings
 
   dist:
     needs: verify-tests-and-formatting
