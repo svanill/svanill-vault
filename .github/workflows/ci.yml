@@ -39,28 +39,16 @@ jobs:
           key: ${{ runner.os }}-build
 
       - name: cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
+        run: cargo build
 
       - name: Check that we didn't introduce native ssl
         run: "! ldd ../target/debug/svanill-vault-cli | grep -q libssl"
 
       - name: cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+        run: cargo test
 
       - name: cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
-          toolchain: nightly
+        run: cargo +nightly fmt --all -- --check
 
       - name: cargo clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --all-targets --all-features
-          toolchain: nightly
+        run: cargo +nightly clippy --all-targets --all-features
