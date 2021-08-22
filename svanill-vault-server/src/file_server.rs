@@ -118,7 +118,7 @@ impl FileServer {
 
                     let url = self.get_presigned_retrieve_url(key.clone());
 
-                    let (_, filename) = split_object_key(&username, &key)
+                    let (_, filename) = split_object_key(username, &key)
                         .expect("object key does not match user prefix");
 
                     Ok::<FileDTO, FileServerError>(FileDTO {
@@ -178,8 +178,8 @@ impl FileServer {
         let (upload_url, form_data) = PostPolicy::default()
             .set_bucket_name(&self.bucket)
             .set_region(&self.region)
-            .set_access_key_id(&self.credentials.aws_access_key_id())
-            .set_secret_access_key(&self.credentials.aws_secret_access_key())
+            .set_access_key_id(self.credentials.aws_access_key_id())
+            .set_secret_access_key(self.credentials.aws_secret_access_key())
             .set_key(&key)
             .set_content_length_range(bytes_range_min, bytes_range_max)
             .set_expiration(&expiration_date)

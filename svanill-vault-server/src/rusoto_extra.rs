@@ -67,7 +67,7 @@ impl<'a> PostPolicy<'a> {
             return self;
         }
 
-        self = self.append_policy("eq", "$key", &key);
+        self = self.append_policy("eq", "$key", key);
         self.key = Some(key);
         self.form_data.insert("key".to_string(), key.to_string());
         self
@@ -82,7 +82,7 @@ impl<'a> PostPolicy<'a> {
 
         self.key = Some(key);
 
-        self = self.append_policy("starts-with", "$key", &key);
+        self = self.append_policy("starts-with", "$key", key);
         self.form_data.insert("key".to_string(), key.to_string());
         self
     }
@@ -245,9 +245,9 @@ impl<'a> PostPolicy<'a> {
 
         let x_amz_signature = signature::sign_string(
             &policy_as_base64,
-            &secret_access_key,
+            secret_access_key,
             signature_date,
-            &region_name,
+            region_name,
             "s3",
         );
 
@@ -264,7 +264,7 @@ impl<'a> PostPolicy<'a> {
         self.form_data
             .insert("x-amz-signature".to_string(), x_amz_signature);
 
-        let signed_request = SignedRequest::new("GET", "s3", &region, "/");
+        let signed_request = SignedRequest::new("GET", "s3", region, "/");
 
         let upload_url = format!(
             "{}://{}.{}",
@@ -350,7 +350,7 @@ mod tests {
         let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
 
         let res = PostPolicy::default()
-            .set_bucket_name(&BUCKET)
+            .set_bucket_name(BUCKET)
             .set_access_key_id(ACCESS_KEY_ID)
             .set_secret_access_key(SECRET_ACCESS_KEY)
             .set_key(OBJECT_KEY)
@@ -364,7 +364,7 @@ mod tests {
         let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
 
         let res = PostPolicy::default()
-            .set_bucket_name(&BUCKET)
+            .set_bucket_name(BUCKET)
             .set_region(&REGION)
             .set_secret_access_key(SECRET_ACCESS_KEY)
             .set_key(OBJECT_KEY)
@@ -379,7 +379,7 @@ mod tests {
         let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
 
         let res = PostPolicy::default()
-            .set_bucket_name(&BUCKET)
+            .set_bucket_name(BUCKET)
             .set_region(&REGION)
             .set_access_key_id(ACCESS_KEY_ID)
             .set_key(OBJECT_KEY)
@@ -392,7 +392,7 @@ mod tests {
     #[test]
     fn expiration_is_required() {
         let res = PostPolicy::default()
-            .set_bucket_name(&BUCKET)
+            .set_bucket_name(BUCKET)
             .set_region(&REGION)
             .set_access_key_id(ACCESS_KEY_ID)
             .set_key(OBJECT_KEY)

@@ -240,7 +240,7 @@ async fn remove_file(
     let username = &exts.get::<Username>().unwrap().0;
 
     s3_fs
-        .remove_file(&username, q.filename.as_ref().unwrap())
+        .remove_file(username, q.filename.as_ref().unwrap())
         .await
         .map_err(VaultError::S3Error)?;
 
@@ -348,10 +348,7 @@ pub fn render_500(mut res: ServiceResponse<Body>) -> actix_web::Result<ErrorHand
     let v_error = VaultError::UnexpectedError("".to_owned());
     *resp.status_mut() = v_error.status_code();
 
-    sentry::capture_message(
-        &v_error.to_string().as_ref(),
-        sentry::protocol::Level::Error,
-    );
+    sentry::capture_message(v_error.to_string().as_ref(), sentry::protocol::Level::Error);
 
     Ok(ErrorHandlerResponse::Response(res.map_body(
         |_head, _body| actix_web::dev::ResponseBody::Body(v_error.to_string().into()),

@@ -9,7 +9,7 @@ pub struct AuthToken(pub String);
 impl AuthToken {
     pub fn new(crypto_key: &ring::hmac::Key) -> AuthToken {
         let token = generate_token();
-        let tag = hmac::sign(&crypto_key, &token);
+        let tag = hmac::sign(crypto_key, &token);
         let signed_token = format!("{}{}", hex::encode(tag), hex::encode(token.as_ref()));
         AuthToken(signed_token)
     }
