@@ -45,7 +45,7 @@ jobs:
         run: "! ldd ../target/debug/svanill-vault-cli | grep -q libssl"
 
       - name: cargo test
-        run: cargo test
+        run: cargo test --workspace --bins --examples --tests --benches
 
       - name: cargo fmt
         run: cargo +nightly fmt --all -- --check
