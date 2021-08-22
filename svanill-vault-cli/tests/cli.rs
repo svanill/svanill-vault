@@ -54,9 +54,9 @@ fn it_list_remote_files() {
 
     let base_url = &mockito::server_url();
 
-    let (m1, m2) = mock_successful_authentication_requests(&base_url);
+    let (m1, m2) = mock_successful_authentication_requests(base_url);
 
-    let m3 = mock_list_files_happy_path(&base_url, &username);
+    let m3 = mock_list_files_happy_path(base_url, username);
 
     let assert = cmd
         .args(&[
@@ -86,7 +86,7 @@ fn it_delete_files() {
 
     let base_url = &mockito::server_url();
 
-    let (m1, m2) = mock_successful_authentication_requests(&base_url);
+    let (m1, m2) = mock_successful_authentication_requests(base_url);
 
     let m3 = mock("DELETE", "/files/?filename=some-file-to-delete")
         .with_status(200)
@@ -122,8 +122,8 @@ fn it_pull_remote_file_output_to_stdout() {
 
     let base_url = &mockito::server_url();
 
-    let (m1, m2) = mock_successful_authentication_requests(&base_url);
-    let m3 = mock_list_files_happy_path(&base_url, &username);
+    let (m1, m2) = mock_successful_authentication_requests(base_url);
+    let m3 = mock_list_files_happy_path(base_url, username);
 
     let m4 = mock("GET", "/imaginary/url/this-is-a-test-file")
         .with_status(200)
@@ -158,7 +158,7 @@ fn it_push_content_from_stdin_to_remote_file() {
 
     let base_url = &mockito::server_url();
 
-    let (m1, m2) = mock_successful_authentication_requests(&base_url);
+    let (m1, m2) = mock_successful_authentication_requests(base_url);
 
     let m3 = mock("POST", "/files/request-upload-url")
         .match_body(r#"{"filename":"some-remote-filename"}"#)

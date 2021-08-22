@@ -42,9 +42,9 @@ struct Opt {
 #[derive(Debug, StructOpt)]
 enum Command {
     #[structopt(name = "ls", alias = "list")]
-    LIST {},
+    List {},
     #[structopt(name = "pull")]
-    PULL {
+    Pull {
         /// Download the remote file that has this name, by default to a local file with the same name
         #[structopt(name = "remote_name")]
         remote_name: String,
@@ -56,7 +56,7 @@ enum Command {
         write_to_stdout: bool,
     },
     #[structopt(name = "push")]
-    PUSH {
+    Push {
         /// Push file to a svanill-vault server.
         /// With no FILE, or when FILE is -, read standard input.
         /// When reading from standard input, -g is implied
@@ -70,7 +70,7 @@ enum Command {
         maybe_remote_name: Option<String>,
     },
     #[structopt(name = "rm")]
-    DELETE {
+    Delete {
         /// Read input from <file> instead of stdin
         #[structopt(name = "file")]
         remote_name: String,
@@ -105,7 +105,7 @@ fn main() -> Result<()> {
     let mut opt = Opt::from_args();
 
     // Check some options validity before attempting network requests
-    if let Command::PUSH {
+    if let Command::Push {
         ref mut gen_random_remote_name,
         ref mut maybe_input_file,
         ref maybe_remote_name,
@@ -137,7 +137,7 @@ fn main() -> Result<()> {
     }
 
     let cli_name = "svanill-vault-cli";
-    let mut conf: Config = confy::load(&cli_name)?;
+    let mut conf: Config = confy::load(cli_name)?;
     let mut conf_updated = false;
 
     if opt.username != None {
@@ -145,7 +145,7 @@ fn main() -> Result<()> {
         conf_updated = true;
     }
 
-    if conf.username == "" {
+    if conf.username.is_empty() {
         eprintln!("Error: username is missing");
         std::process::exit(1);
     }
@@ -168,7 +168,7 @@ fn main() -> Result<()> {
         eprintln!("Cannot authenticate, missing answer to the server's challenge.");
         eprintln!("Decrypt the challenge to get the answer:");
         eprintln!("  svanill -i <(echo {}) dec", challenge);
-        eprintln!("");
+        eprintln!();
         eprintln!("Then re-run svanill-vault-cli passing --username and --answer. They will be stored in a config file so you won't have to provide them again");
         std::process::exit(1);
     }
@@ -182,18 +182,18 @@ fn main() -> Result<()> {
     conf.token = answer_challenge(&conf, answer)?;
 
     if conf_updated && opt.store_conf {
-        confy::store(&cli_name, &conf)?;
+        confy::store(cli_name, &conf)?;
     }
 
     match opt.cmd {
-        Command::LIST {} => {
+        Command::List {} => {
             output_files_list(&opt, ls(&conf)?);
         }
-        Command::DELETE { remote_name } => {
+        Command::Delete { remote_name } => {
             delete(&conf, &remote_name)?;
             println!("Success: deleted file \"{}\"", remote_name);
         }
-        Command::PULL {
+        Command::Pull {
             output_file,
             write_to_stdout,
             remote_name,
@@ -224,7 +224,7 @@ fn main() -> Result<()> {
             let mut reader = retrieve(&f.url)?;
             std::io::copy(&mut reader, &mut handle)?;
         }
-        Command::PUSH {
+        Command::Push {
             gen_random_remote_name,
             maybe_input_file,
             maybe_remote_name,

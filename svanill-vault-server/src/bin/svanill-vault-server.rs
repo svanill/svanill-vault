@@ -5,6 +5,7 @@ use ring::{hmac, rand};
 use rusoto_signature::region::Region;
 use std::env;
 use std::net::TcpListener;
+use std::path::Path;
 use structopt::StructOpt;
 use svanill_vault_server::auth::tokens_cache::TokensCache;
 use svanill_vault_server::file_server;
@@ -95,7 +96,7 @@ fn setup_log(level: Option<log::Level>) {
     env_logger::init();
 }
 
-async fn download_file(url: &str, path: &std::path::PathBuf) -> Result<()> {
+async fn download_file(url: &str, path: &Path) -> Result<()> {
     let res = reqwest::get(url).await?;
     let res = res.error_for_status()?;
     let bytes = res.bytes().await?;

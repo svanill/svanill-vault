@@ -9,81 +9,46 @@ on:
       - master
 
 jobs:
-  check:
-    name: Check
+  build-and-test:
+    name: build and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Cache dependencies
-        uses: actions/cache@v2
-        env:
-          cache-name: cache-target-directory
-        with:
-          path: target
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('Cargo.lock') }}
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
 
-  test:
-    name: Test Suite
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
-      - name: Cache dependencies
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: default # contains rustfmt, clippy
+          toolchain: nightly
+
+      - name: Setup cache (and restore immediately if there's a key match)
         uses: actions/cache@v2
-        env:
-          cache-name: cache-target-directory
         with:
-          path: target
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('Cargo.lock') }}
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
+          path: |
+            target
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git
+          # don't use Cargo.lock hash in the key, so we can change it
+          # and still reuse most deps
+          key: ${{ runner.os }}-build
+
+      - name: cargo build
+        run: cargo build
+
       - name: Check that we didn't introduce native ssl
-        run: '! ldd ../target/debug/svanill-vault-cli | grep -q libssl'
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
+        run: "! ldd ../target/debug/svanill-vault-cli | grep -q libssl"
 
-  fmt:
-    name: Rustfmt
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-      - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - name: cargo test
+        run: cargo test --workspace --bins --examples --tests --benches
 
-  clippy:
-    name: Clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-      - run: rustup component add clippy
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --all-targets --all-features
+      - name: cargo fmt
+        run: cargo +nightly fmt --all -- --check
+
+      - name: cargo clippy
+        run: cargo +nightly clippy --all-targets --all-features --workspace --bins --examples --tests --benches -- -D warnings
