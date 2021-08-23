@@ -8,9 +8,9 @@ use diesel::{
 use r2d2::Pool;
 use ring::hmac;
 use ring::test::rand::FixedByteRandom;
+use rusoto_core::Region;
 use rusoto_credential::AwsCredentials;
 use rusoto_mock::{MockCredentialsProvider, MockRequestDispatcher};
-use rusoto_signature::region::Region;
 use std::net::TcpListener;
 use svanill_vault_openapi::{
     AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
@@ -86,7 +86,8 @@ impl AppDataBuilder for AppData {
     }
 }
 
-fn spawn_app(data: AppData) -> String {
+#[tokio::main]
+async fn spawn_app(data: AppData) -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
 
     // Retrieve the port assigned to us by the OS
