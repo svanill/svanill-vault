@@ -23,9 +23,10 @@ thiserror = "1.0.20"
 ring = "0.16.15"
 hex = "0.4.2"
 lru-cache = "0.1.2"
-rusoto_core = { version = "0.45.0", default-features = false, features = ["rustls"] }
-rusoto_s3 = { version = "0.45.0", default-features = false, features = ["rustls"] }
-rusoto_credential = "0.45.0"
+rusoto_core = { version = "0.47.0", default-features = false, features = ["rustls", "rustls-webpki"] }
+rusoto_s3 = { version = "0.47.0", default-features = false, features = ["rustls"] }
+rusoto_credential = "0.47.0"
+rusoto_signature = "0.47.0"
 futures = "0.3.5"
 anyhow = "1.0.31"
 actix-web-httpauth = "0.5.0"
@@ -35,15 +36,13 @@ base64 = "0.12.3"
 hmac = "0.7.1"
 sha2 = "0.8.2"
 time = "0.2.16"
-rusoto_signature = "0.45.0"
 chrono = "0.4.13"
 color-backtrace = { version = "0.4.2" }
 diesel_migrations = "1.4.0"
 reqwest = { version = "0.10.7", default-features = false, features=["json", "rustls-tls"] }
-webpki-roots = "0.20.0"
-hyper = "0.13.7"
-hyper-rustls = "0.21.0"
-rustls = "0.18.0"
+hyper = { version = "0.14.11", features = ["full"] }
+hyper-rustls = { version = "0.22.1", features = ["webpki-roots"] }
+tokio = "1.10.0"
 
 [dependencies.sentry]
 version = "0.20.1"
