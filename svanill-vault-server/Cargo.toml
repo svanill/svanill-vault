@@ -44,7 +44,7 @@ hyper = { version = "0.14.11", features = ["full"] }
 hyper-rustls = { version = "0.22.1", features = ["webpki-roots"] }
 
 [dependencies.sentry]
-version = "0.20.1"
+version = "0.23.0"
 default-features = false
 features = ["rustls", "backtrace", "contexts", "panic", "reqwest"]
 
