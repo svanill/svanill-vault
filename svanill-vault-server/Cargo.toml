@@ -39,7 +39,7 @@ time = "0.2.16"
 chrono = "0.4.13"
 color-backtrace = { version = "0.4.2" }
 diesel_migrations = "1.4.0"
-reqwest = { version = "0.10.7", default-features = false, features=["json", "rustls-tls"] }
+reqwest = { version = "0.11.4", default-features = false, features=["blocking", "gzip", "multipart", "json", "rustls-tls", "rustls-tls-webpki-roots"] }
 hyper = { version = "0.14.11", features = ["full"] }
 hyper-rustls = { version = "0.22.1", features = ["webpki-roots"] }
 

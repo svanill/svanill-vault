@@ -361,6 +361,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-compression"
+version = "0.3.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5443ccbb270374a2b1055fc72da40e1f237809cd6bb0e97e66d264cd138473a6"
+dependencies = [
+ "flate2",
+ "futures-core",
+ "memchr",
+ "pin-project-lite 0.2.7",
+ "tokio 1.10.0",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2149,6 +2162,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "reqwest"
+version = "0.11.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "246e9f61b9bb77df069a947682be06e31ac43ea37862e244a69f177694ea6d22"
+dependencies = [
+ "async-compression",
+ "base64 0.13.0",
+ "bytes 1.0.1",
+ "encoding_rs",
+ "futures-core",
+ "futures-util",
+ "http",
+ "http-body 0.4.3",
+ "hyper 0.14.11",
+ "hyper-rustls 0.22.1",
+ "ipnet",
+ "js-sys",
+ "lazy_static",
+ "log",
+ "mime",
+ "mime_guess",
+ "percent-encoding",
+ "pin-project-lite 0.2.7",
+ "rustls 0.19.1",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "tokio 1.10.0",
+ "tokio-rustls 0.22.0",
+ "tokio-util 0.6.7",
+ "url",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "webpki-roots 0.21.1",
+ "winreg 0.7.0",
+]
+
+[[package]]
 name = "resolv-conf"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2451,7 +2503,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "144e85b28d129f056ef91664fe2b985eade906d2838752c2f61c9f233cd98e4a"
 dependencies = [
  "httpdate 0.3.2",
- "reqwest",
+ "reqwest 0.10.10",
  "sentry-backtrace",
  "sentry-contexts",
  "sentry-core",
@@ -2786,7 +2838,7 @@ dependencies = [
  "md-5",
  "mockito",
  "rand 0.7.3",
- "reqwest",
+ "reqwest 0.11.4",
  "serde",
  "serde_json",
  "structopt",
@@ -2826,7 +2878,7 @@ dependencies = [
  "libsqlite3-sys",
  "log",
  "lru-cache",
- "reqwest",
+ "reqwest 0.11.4",
  "ring",
  "rusoto_core",
  "rusoto_credential",
