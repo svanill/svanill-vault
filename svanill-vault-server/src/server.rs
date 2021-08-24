@@ -37,15 +37,14 @@ pub fn run(listener: TcpListener, data: AppData) -> Result<Server, std::io::Erro
             .wrap(ErrorHandlers::new().handler(http::StatusCode::BAD_REQUEST, render_40x))
             .wrap(Logger::default())
             .wrap(
-                actix_cors::Cors::new()
+                actix_cors::Cors::default()
                     .allowed_methods(vec!["HEAD", "OPTIONS", "GET", "POST", "PUT", "DELETE"])
                     .allowed_headers(vec![
                         http::header::AUTHORIZATION,
                         http::header::ACCEPT,
                         http::header::CONTENT_TYPE,
                     ])
-                    .max_age(86400)
-                    .finish(),
+                    .max_age(86400),
             )
             .configure(config_handlers)
     })
