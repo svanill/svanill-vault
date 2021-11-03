@@ -1,6 +1,6 @@
 use crate::file_server::FileServerError;
 use actix_http::ResponseBuilder;
-use actix_web::{error, http::header, http::StatusCode, HttpResponse};
+use actix_web::{error, http::header, http::StatusCode};
 use serde::Deserializer;
 use serde::{ser::Serializer, Deserialize};
 use std::fmt::{self, Display};
@@ -54,10 +54,11 @@ impl ApiError {
 }
 
 impl error::ResponseError for ApiError {
-    fn error_response(&self) -> HttpResponse {
+    fn error_response(&self) -> actix_web::HttpResponse {
         ResponseBuilder::new(self.status_code())
-            .set_header(header::CONTENT_TYPE, "application/json; charset=utf-8")
+            .insert_header((header::CONTENT_TYPE, "application/json; charset=utf-8"))
             .body(self.to_string())
+            .into()
     }
 
     fn status_code(&self) -> StatusCode {
@@ -131,7 +132,7 @@ impl From<&VaultError> for ApiError {
 }
 
 impl error::ResponseError for VaultError {
-    fn error_response(&self) -> HttpResponse {
+    fn error_response(&self) -> actix_web::HttpResponse {
         let as_api_err: ApiError = self.into();
         as_api_err.error_response()
     }

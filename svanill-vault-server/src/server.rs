@@ -1,6 +1,6 @@
 use actix_web::dev::Server;
-use actix_web::middleware::{errhandlers::ErrorHandlers, Logger};
-use actix_web::{http, App, HttpServer};
+use actix_web::middleware::{ErrorHandlers, Logger};
+use actix_web::{http, web, App, HttpServer};
 
 use crate::auth::tokens_cache::TokensCache;
 use crate::file_server::FileServer;
@@ -29,10 +29,10 @@ pub fn run(listener: TcpListener, data: AppData) -> Result<Server, std::io::Erro
 
     let server = HttpServer::new(move || {
         App::new()
-            .data(pool.clone())
-            .data(crypto_key.clone())
-            .data(tokens_cache.clone())
-            .data(s3_fs.clone())
+            .app_data(web::Data::new(pool.clone()))
+            .app_data(web::Data::new(crypto_key.clone()))
+            .app_data(web::Data::new(tokens_cache.clone()))
+            .app_data(web::Data::new(s3_fs.clone()))
             .wrap(ErrorHandlers::new().handler(http::StatusCode::INTERNAL_SERVER_ERROR, render_500))
             .wrap(ErrorHandlers::new().handler(http::StatusCode::BAD_REQUEST, render_40x))
             .wrap(Logger::default())

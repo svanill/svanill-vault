@@ -5,11 +5,11 @@ use crate::auth::tokens_cache::TokensCache;
 use crate::auth::Username;
 use crate::file_server;
 use crate::{db, errors::VaultError};
-use actix_http::ResponseError;
 use actix_web::body::Body;
+use actix_web::middleware::ErrorHandlerResponse;
 use actix_web::{
-    delete, dev::ServiceResponse, get, guard, http, middleware::errhandlers::ErrorHandlerResponse,
-    post, web, Error, HttpRequest, HttpResponse,
+    delete, dev::ServiceResponse, get, guard, http, post, web, Error, HttpRequest, HttpResponse,
+    ResponseError,
 };
 use actix_web_httpauth::middleware::HttpAuthentication;
 use diesel::prelude::*;
@@ -43,7 +43,7 @@ async fn index(req: HttpRequest) -> HttpResponse {
 #[get("/favicon.ico")]
 async fn favicon() -> HttpResponse {
     HttpResponse::Ok()
-        .header(http::header::CONTENT_TYPE, "image/svg+xml")
+        .insert_header((http::header::CONTENT_TYPE, "image/svg+xml"))
         .body(include_str!("../../favicon.svg"))
 }
 
@@ -72,7 +72,7 @@ async fn auth_user_request_challenge(
         web::block(move || db::actions::find_user_by_username(&conn, q.username.as_ref().unwrap()))
             .await?;
 
-    if let Some(user) = maybe_user {
+    if let Ok(Some(user)) = maybe_user {
         Ok(HttpResponse::Ok().json(
             serde_json::from_value::<AskForTheChallengeResponse>(json!({
                 "status": 200,
@@ -104,7 +104,7 @@ async fn auth_user_answer_challenge(
     let maybe_user =
         web::block(move || db::actions::find_user_by_username(&conn, &payload.username)).await?;
 
-    if let Some(user) = maybe_user {
+    if let Ok(Some(user)) = maybe_user {
         let correct_answer = user.answer;
 
         if answer != correct_answer {
@@ -350,9 +350,9 @@ pub fn render_500(mut res: ServiceResponse<Body>) -> actix_web::Result<ErrorHand
 
     sentry::capture_message(v_error.to_string().as_ref(), sentry::protocol::Level::Error);
 
-    Ok(ErrorHandlerResponse::Response(res.map_body(
-        |_head, _body| actix_web::dev::ResponseBody::Body(v_error.to_string().into()),
-    )))
+    Ok(ErrorHandlerResponse::Response(
+        res.map_body(|_head, _body| v_error.to_string().into()),
+    ))
 }
 
 pub fn render_40x(mut res: ServiceResponse<Body>) -> actix_web::Result<ErrorHandlerResponse<Body>> {
@@ -379,9 +379,9 @@ pub fn render_40x(mut res: ServiceResponse<Body>) -> actix_web::Result<ErrorHand
 
         *resp.status_mut() = v_error.status_code();
 
-        Ok(ErrorHandlerResponse::Response(res.map_body(
-            |_head, _body| actix_web::dev::ResponseBody::Body(v_error.to_string().into()),
-        )))
+        Ok(ErrorHandlerResponse::Response(
+            res.map_body(|_head, _body| v_error.to_string().into()),
+        ))
     }
 }
 
@@ -396,7 +396,7 @@ pub fn config_handlers(cfg: &mut web::ServiceConfig) {
             web::resource("/auth/answer-challenge")
                 .route(web::post().to(handlers::auth_user_answer_challenge))
                 .name("auth_user_answer_challenge")
-                .data(web::JsonConfig::default().limit(512)),
+                .app_data(web::JsonConfig::default().limit(512)),
         )
         .service(
             web::scope("")
@@ -405,9 +405,8 @@ pub fn config_handlers(cfg: &mut web::ServiceConfig) {
                 .service(handlers::request_upload_url)
                 .service(handlers::list_user_files)
                 .service(handlers::remove_file)
-                .default_service(
-                    // 404 for GET request
-                    web::resource("/a/b")
+                .service(
+                    web::resource("/{whatever:.*}")
                         .route(web::get().to(handlers::p404))
                         // all requests that are not `GET`
                         .route(
