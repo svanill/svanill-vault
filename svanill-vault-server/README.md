@@ -62,11 +62,23 @@ RUST_LOG=trace,actix_server=trace,actix_web=trace cargo run -- \
 ## Database
 
 svanill-vault-server access a read only SQLite database file.
-If the database file does not exist, it will be created and a migration will run automatically.
-You can add users by running a query such as
+Upon first run, if the database file does not exist, it will be created and migrations will run automatically.
+
+To add a user you must first generate the pair `answer` / `challenge`.
 
 ```
-sqlite3 test.db
+# generate a random string, such as D831E09A209E23261FBD2DC5E3321112
+ANSWER=$(hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random)
+echo "Answer is: $ANSWER"
+svanill -i <(echo $ANSWER) -p "the password" enc # note, better not use -p
+# The challenge is now the output of svanill-cli
+```
+
+Then you can add them to the database.
+
+```
+$ sqlite3 test.db
+sqlite> -- display the database schema
 sqlite> .schema
 CREATE TABLE __diesel_schema_migrations (version VARCHAR(50) PRIMARY KEY NOT NULL,run_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE user (
@@ -74,6 +86,10 @@ CREATE TABLE user (
   challenge VARCHAR(255) NOT NULL,
   answer VARCHAR(32) NOT NULL
 );
+sqlite> -- add a new user
 sqlite> INSERT INTO user VALUES ('your username', 'the challenge', 'the answer');
 ```
+
+To have svanill-vault-cli later authenticate correctly, you are expected to produce the challenge by encrypting the answer using svanill-cli
+
 
