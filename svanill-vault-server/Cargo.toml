@@ -12,35 +12,35 @@ readme = "README.md"
 svanill-vault-openapi = { path = "../svanill-vault-openapi", version = "0.1" }
 actix-web = { version = "4.0.0-beta.10", features = ["rustls"] }
 env_logger = "0.7.1"
-structopt = "0.3.15"
-diesel = { version = "1.4.5", features = ["sqlite", "r2d2"] }
-libsqlite3-sys = { version = ">=0.8.0, <0.19.0", features = ["bundled"] }
-serde = "1.0.114"
-serde_json = "1.0.56"
-serde_derive = "1.0.114"
+structopt = "0.3.25"
+diesel = { version = "1.4.8", features = ["sqlite", "r2d2"] }
+libsqlite3-sys = { version = "0.18.0", features = ["bundled"] }
+serde = "1.0.130"
+serde_json = "1.0.69"
+serde_derive = "1.0.130"
 actix-http = "3.0.0-beta.11"
-thiserror = "1.0.20"
-ring = "0.16.15"
-hex = "0.4.2"
+thiserror = "1.0.30"
+ring = "0.16.20"
+hex = "0.4.3"
 lru-cache = "0.1.2"
 rusoto_core = { version = "0.47.0", default-features = false, features = ["rustls", "rustls-webpki"] }
 rusoto_s3 = { version = "0.47.0", default-features = false, features = ["rustls"] }
 rusoto_credential = "0.47.0"
 rusoto_signature = "0.47.0"
-futures = "0.3.5"
-anyhow = "1.0.31"
+futures = "0.3.17"
+anyhow = "1.0.45"
 actix-web-httpauth = "0.6.0-beta.3"
-log = "0.4.8"
+log = "0.4.14"
 actix-cors = "0.6.0-beta.3"
 base64 = "0.12.3"
 hmac = "0.7.1"
 sha2 = "0.8.2"
-time = "0.2.16"
-chrono = "0.4.13"
-color-backtrace = { version = "0.4.2" }
+time = "0.2.27"
+chrono = "0.4.19"
+color-backtrace = "0.4.2"
 diesel_migrations = "1.4.0"
-reqwest = { version = "0.11.4", default-features = false, features=["blocking", "gzip", "multipart", "json", "rustls-tls", "rustls-tls-webpki-roots"] }
-hyper = { version = "0.14.11", features = ["full"] }
+reqwest = { version = "0.11.6", default-features = false, features = ["blocking", "gzip", "multipart", "json", "rustls-tls", "rustls-tls-webpki-roots"] }
+hyper = { version = "0.14.14", features = ["full"] }
 hyper-rustls = { version = "0.22.1", features = ["webpki-roots"] }
 
 [dependencies.sentry]
@@ -49,7 +49,7 @@ default-features = false
 features = ["rustls", "backtrace", "contexts", "panic", "reqwest"]
 
 [dev-dependencies]
-tokio = "1.10.0"
-ctor = "0.1.15"
+tokio = "1.13.0"
+ctor = "0.1.21"
 rusoto_mock = { version = "0.47.0", default-features = false, features = ["rustls"] }
-actix-rt = "2.2.0"
+actix-rt = "2.4.0"
