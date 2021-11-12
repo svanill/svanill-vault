@@ -1,8 +1,20 @@
 # svanill-vault-server
 
-An HTTP server to store/retrieve files produced by svanill ([cli](https://github.com/svanill/svanill-cli) or [web](https://github.com/svanill/svanill)).
+An HTTP server meant to be used to store/retrieve files produced by svanill ([cli](https://github.com/svanill/svanill-cli) or [web](https://github.com/svanill/svanill)).
 
-An authenticated user can push, list or remove files to a dedicated S3 bucket.
+Authenticated users can manage their own files, stored in a S3 bucket.
+
+
+## Authentication
+
+When creating an account, users must provide a pair `answer` / `challenge`. They later authenticate by requesting their challenge and then providing the answer to that challenge.
+
+`answer` should be a random string of non-trivial length, e.g. the output of `hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random`
+
+`challenge` is the answer encrypted with a symmetric algorithm (supposedly using Svanill ([web](https://github.com/svanill/svanill) or [cli](https://github.com/svanill/svanill-cli)).
+
+It works this way so that a Svanill user can use a single password to both encrypt/decrypt files and login securely (Svanill encrypt using AES-GCM which doesn't suffer from known-plaintext attack).
+
 
 ## Third party services
 
@@ -64,14 +76,4 @@ CREATE TABLE user (
 );
 sqlite> INSERT INTO user VALUES ('your username', 'the challenge', 'the answer');
 ```
-
-## Authentication
-
-Users authenticate by requesting a challenge and then providing the answer to that challenge.
-
-`answer` should be a random string, e.g. generated with `hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random`
-
-`challenge` is the answer encrypted with a symmetric algorithm (supposedly using Svanill ([web](https://github.com/svanill/svanill) or [cli](https://github.com/svanill/svanill-cli)).
-
-It works this way so that a Svanill user can use a single password to both encrypt/decrypt files and login securely (Svanill encrypt using AES-GCM which doesn't suffer from known-plaintext attack).
 
