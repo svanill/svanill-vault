@@ -1,2 +1,3 @@
 .env
 vault.db
+local.db
