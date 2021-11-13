@@ -11,7 +11,7 @@ cp openapi3.yml tmp_build/
 
 curl -s https://raw.githubusercontent.com/OpenAPITools/openapi-generator/master/modules/openapi-generator/src/main/resources/rust/model.mustache | grep -v partial_header > tmp_build/templates/model.mustache
 
-docker run -u $(id -u) --rm -v ${PWD}/tmp_build:/local \
+podman run -u $(id -u) --rm -v ${PWD}/tmp_build:/local \
     openapitools/openapi-generator-cli \
     generate \
     -g rust \
