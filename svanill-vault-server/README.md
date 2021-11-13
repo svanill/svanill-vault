@@ -92,4 +92,65 @@ sqlite> INSERT INTO user VALUES ('your username', 'the challenge', 'the answer')
 
 To have svanill-vault-cli later authenticate correctly, you are expected to produce the challenge by encrypting the answer using svanill-cli
 
+## Local development
+
+To try svanill-vault-server, you need to
+- have an S3 like server ready (or start one such as `minio` locally)
+- start svanill-vault-server
+- connect to it, either directly (e.g. using `curl`) or through `svanill-vault-cli`
+
+
+### Start a local S3 compatible server
+
+
+```
+podman run -p 9000:9000 -p 9001:9001 -e "MINIO_ROOT_USER=svanill-vault-local-access-key" -e "MINIO_ROOT_PASSWORD=svanill-vault-s3-secret" quay.io/minio/minio server /data --console-address ":9001"
+```
+
+Minio api can be reached at port 9000, admin console at port 9001.
+**IMPORTANT: Create a bucket** using the admin console at `http://127.0.0.1:9001`, let's call it `svanill-local-bucket`.
+
+### Start svanill-vault-server
+
+
+```
+RUST_LOG=trace,actix_server=trace,actix_web=trace cargo run -- \
+  --s3-access-key-id=svanill-vault-local-access-key \
+  --s3-secret-access-key=svanill-local-s3-secret \
+  --s3-bucket svanill-local-bucket \
+  --s3-region=us-east-1 \
+  --s3-endpoint=http://localhost:9000 \
+  -H 127.0.0.1 \
+  -P 5000 \
+  -d local.db \
+  -v
+```
+
+Add a default dev user, it will have these properties:
+- username `local-user`
+- answer `9E3245D722A884F02A5DE6030A904C9C`
+- the challenge is generated using password `x` with `svanill` (to simplify usage of `svanill-vault-cli`).
+
+```
+./add-dev-user.sh local.db
+```
+
+### Try to connect with svanill-vault-cli
+
+```
+cargo run svanill-vault-cli -- \
+  -h localhost:5000 \
+  -u local-user \
+  -a 9E3245D722A884F02A5DE6030A904C9C \
+  ls
+```
+
+Remember that you can configure default host/user/answer at
+`~/.config/svanill-vault-cli/svanill-vault-cli.toml` (or similar, depending on your OS).
+so that you could simply run
+
+```
+cargo run svanill-vault-cli -- ls
+```
+
 
