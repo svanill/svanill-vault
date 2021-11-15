@@ -8,9 +8,9 @@ use diesel::{
 use r2d2::Pool;
 use ring::hmac;
 use ring::test::rand::FixedByteRandom;
+use rusoto_core::Region;
 use rusoto_credential::AwsCredentials;
 use rusoto_mock::{MockCredentialsProvider, MockRequestDispatcher};
-use rusoto_signature::region::Region;
 use std::net::TcpListener;
 use svanill_vault_openapi::{
     AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
@@ -86,7 +86,7 @@ impl AppDataBuilder for AppData {
     }
 }
 
-fn spawn_app(data: AppData) -> String {
+async fn spawn_app(data: AppData) -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
 
     // Retrieve the port assigned to us by the OS
@@ -101,7 +101,7 @@ fn spawn_app(data: AppData) -> String {
 
 #[actix_rt::test]
 async fn noauth_noroute_must_return_401() {
-    let address = spawn_app(AppData::new());
+    let address = spawn_app(AppData::new()).await;
     let client = reqwest::Client::new();
 
     let resp = client
@@ -124,7 +124,7 @@ async fn noauth_noroute_must_return_401() {
 async fn auth_noroute_noget_must_return_405() {
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user");
 
-    let address = spawn_app(AppData::new().tokens_cache(tokens_cache));
+    let address = spawn_app(AppData::new().tokens_cache(tokens_cache)).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -148,7 +148,7 @@ async fn auth_noroute_noget_must_return_405() {
 async fn auth_noroute_get_must_return_404() {
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user");
 
-    let address = spawn_app(AppData::new().tokens_cache(tokens_cache));
+    let address = spawn_app(AppData::new().tokens_cache(tokens_cache)).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -169,7 +169,7 @@ async fn auth_noroute_get_must_return_404() {
 
 #[actix_rt::test]
 async fn root() {
-    let address = spawn_app(AppData::new());
+    let address = spawn_app(AppData::new()).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -221,7 +221,7 @@ fn setup_test_db_with_user() -> Pool<ConnectionManager<SqliteConnection>> {
 
 #[actix_rt::test]
 async fn get_auth_challenge_no_username_provided() {
-    let address = spawn_app(AppData::new());
+    let address = spawn_app(AppData::new()).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -241,7 +241,7 @@ async fn get_auth_challenge_no_username_provided() {
 
 #[actix_rt::test]
 async fn get_auth_challenge_username_not_found() {
-    let address = spawn_app(AppData::new());
+    let address = spawn_app(AppData::new()).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -265,7 +265,7 @@ async fn get_auth_challenge_username_not_found() {
 #[actix_rt::test]
 async fn get_auth_challenge_ok() {
     let pool = setup_test_db_with_user();
-    let address = spawn_app(AppData::new().pool(pool));
+    let address = spawn_app(AppData::new().pool(pool)).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -289,7 +289,7 @@ async fn get_auth_challenge_ok() {
 #[actix_rt::test]
 async fn answer_auth_challenge_username_not_found() {
     let pool = setup_test_db_with_user();
-    let address = spawn_app(AppData::new().pool(pool));
+    let address = spawn_app(AppData::new().pool(pool)).await;
 
     let payload = AnswerUserChallengeRequest {
         username: "notfound".to_owned(),
@@ -316,7 +316,7 @@ async fn answer_auth_challenge_username_not_found() {
 #[actix_rt::test]
 async fn answer_auth_challenge_wrong_answer() {
     let pool = setup_test_db_with_user();
-    let address = spawn_app(AppData::new().pool(pool));
+    let address = spawn_app(AppData::new().pool(pool)).await;
 
     let payload = AnswerUserChallengeRequest {
         username: "test_user_2".to_owned(),
@@ -343,7 +343,7 @@ async fn answer_auth_challenge_wrong_answer() {
 #[actix_rt::test]
 async fn answer_auth_challenge_ok() {
     let pool = setup_test_db_with_user();
-    let address = spawn_app(AppData::new().pool(pool));
+    let address = spawn_app(AppData::new().pool(pool)).await;
 
     let payload = AnswerUserChallengeRequest {
         username: "test_user_2".to_owned(),
@@ -406,7 +406,7 @@ async fn request_upload_url_ok() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let address = spawn_app(AppData::new().pool(pool).tokens_cache(tokens_cache));
+    let address = spawn_app(AppData::new().pool(pool).tokens_cache(tokens_cache)).await;
 
     let payload = RequestUploadUrlRequestBody {
         filename: "test_filename".to_owned(),
@@ -436,7 +436,7 @@ async fn request_upload_url_empty_filename() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let address = spawn_app(AppData::new().pool(pool).tokens_cache(tokens_cache));
+    let address = spawn_app(AppData::new().pool(pool).tokens_cache(tokens_cache)).await;
 
     let payload = RequestUploadUrlRequestBody {
         filename: "".to_owned(),
@@ -465,7 +465,7 @@ async fn request_upload_url_wrong_payload() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let address = spawn_app(AppData::new().pool(pool).tokens_cache(tokens_cache));
+    let address = spawn_app(AppData::new().pool(pool).tokens_cache(tokens_cache)).await;
 
     let payload = "not a proper payload";
 
@@ -523,7 +523,8 @@ async fn list_user_files_ok() {
             .pool(pool)
             .tokens_cache(tokens_cache)
             .s3_fs(s3_fs),
-    );
+    )
+    .await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -574,7 +575,8 @@ async fn list_user_files_s3_error() {
             .pool(pool)
             .tokens_cache(tokens_cache)
             .s3_fs(s3_fs),
-    );
+    )
+    .await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -606,7 +608,8 @@ async fn delete_files_s3_error() {
             .pool(pool)
             .tokens_cache(tokens_cache)
             .s3_fs(s3_fs),
-    );
+    )
+    .await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -638,7 +641,8 @@ async fn delete_files_missing_filename() {
             .pool(pool)
             .tokens_cache(tokens_cache)
             .s3_fs(s3_fs),
-    );
+    )
+    .await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -670,7 +674,8 @@ async fn delete_files_ok() {
             .pool(pool)
             .tokens_cache(tokens_cache)
             .s3_fs(s3_fs),
-    );
+    )
+    .await;
 
     let client = reqwest::Client::new();
     let resp = client
