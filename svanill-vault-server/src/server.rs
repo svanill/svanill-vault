@@ -19,6 +19,7 @@ pub struct AppData {
     pub crypto_key: hmac::Key,
     pub pool: Pool<ConnectionManager<SqliteConnection>>,
     pub s3_fs: FileServer,
+    pub cors_origin: String,
 }
 
 pub fn run(listener: TcpListener, data: AppData) -> Result<Server, std::io::Error> {
@@ -26,8 +27,26 @@ pub fn run(listener: TcpListener, data: AppData) -> Result<Server, std::io::Erro
     let crypto_key = Arc::new(data.crypto_key);
     let pool = data.pool;
     let s3_fs = Arc::new(data.s3_fs);
+    let cors_origin = data.cors_origin;
 
     let server = HttpServer::new(move || {
+        let cors_origin = &cors_origin;
+
+        let mut cors_handler = actix_cors::Cors::default()
+            .allowed_methods(vec!["HEAD", "OPTIONS", "GET", "POST", "PUT", "DELETE"])
+            .allowed_headers(vec![
+                http::header::AUTHORIZATION,
+                http::header::ACCEPT,
+                http::header::CONTENT_TYPE,
+            ])
+            .max_age(86400);
+
+        cors_handler = if cors_origin == "*" {
+            cors_handler.allow_any_origin()
+        } else {
+            cors_handler.allowed_origin(cors_origin)
+        };
+
         App::new()
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(crypto_key.clone()))
@@ -36,16 +55,7 @@ pub fn run(listener: TcpListener, data: AppData) -> Result<Server, std::io::Erro
             .wrap(ErrorHandlers::new().handler(http::StatusCode::INTERNAL_SERVER_ERROR, render_500))
             .wrap(ErrorHandlers::new().handler(http::StatusCode::BAD_REQUEST, render_40x))
             .wrap(Logger::default())
-            .wrap(
-                actix_cors::Cors::default()
-                    .allowed_methods(vec!["HEAD", "OPTIONS", "GET", "POST", "PUT", "DELETE"])
-                    .allowed_headers(vec![
-                        http::header::AUTHORIZATION,
-                        http::header::ACCEPT,
-                        http::header::CONTENT_TYPE,
-                    ])
-                    .max_age(86400),
-            )
+            .wrap(cors_handler)
             .configure(config_handlers)
     })
     .listen(listener)?
