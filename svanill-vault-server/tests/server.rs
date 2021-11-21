@@ -49,6 +49,7 @@ pub trait AppDataBuilder {
     fn crypto_key(self, crypto_key: hmac::Key) -> Self;
     fn pool(self, pool: Pool<ConnectionManager<SqliteConnection>>) -> Self;
     fn s3_fs(self, s3_fs: FileServer) -> Self;
+    fn cors_origin(self, origin: String) -> Self;
 }
 
 impl AppDataBuilder for AppData {
@@ -57,12 +58,14 @@ impl AppDataBuilder for AppData {
         let crypto_key = setup_fake_random_key();
         let pool = setup_test_db();
         let s3_fs = setup_s3_fs(MockRequestDispatcher::default());
+        let cors_origin = String::from("https://example.com");
 
         AppData {
             tokens_cache,
             crypto_key,
             pool,
             s3_fs,
+            cors_origin,
         }
     }
 
@@ -80,8 +83,14 @@ impl AppDataBuilder for AppData {
         self.pool = pool;
         self
     }
+
     fn s3_fs(mut self, s3_fs: FileServer) -> Self {
         self.s3_fs = s3_fs;
+        self
+    }
+
+    fn cors_origin(mut self, origin: String) -> Self {
+        self.cors_origin = origin;
         self
     }
 }
@@ -184,6 +193,78 @@ async fn root() {
         .expect("Cannot decode JSON response");
 
     assert_eq!(200, json_resp.status);
+}
+
+#[actix_rt::test]
+async fn cors_origin_not_allowed() {
+    let address = spawn_app(AppData::new()).await;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .request(reqwest::Method::OPTIONS, &format!("{}/", &address))
+        .header("Origin", "svanill-not-allowed-origin.test")
+        .send()
+        .await
+        .expect("Failed to execute request");
+
+    assert_eq!(400, resp.status());
+    assert_eq!(
+        Some("Origin is not allowed to make this request."),
+        resp.text().await.as_deref().ok()
+    );
+}
+
+#[actix_rt::test]
+async fn cors_origin_request_method_missing() {
+    let address = spawn_app(AppData::new()).await;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .request(reqwest::Method::OPTIONS, &format!("{}/", &address))
+        .header("Origin", "https://example.com")
+        .send()
+        .await
+        .expect("Failed to execute request");
+
+    assert_eq!(400, resp.status());
+    assert_eq!(
+        Some("Request header `Access-Control-Request-Method` is required but is missing."),
+        resp.text().await.as_deref().ok()
+    );
+}
+
+#[actix_rt::test]
+async fn cors_success() {
+    let address = spawn_app(AppData::new()).await;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .request(reqwest::Method::OPTIONS, &format!("{}/", &address))
+        .header("Origin", "https://example.com")
+        .header("Access-Control-Request-Method", "GET")
+        .send()
+        .await
+        .expect("Failed to execute request");
+
+    assert_eq!(200, resp.status());
+    assert_eq!(Some(""), resp.text().await.as_deref().ok());
+}
+
+#[actix_rt::test]
+async fn cors_any_origin_success() {
+    let address = spawn_app(AppData::new().cors_origin(String::from("*"))).await;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .request(reqwest::Method::OPTIONS, &format!("{}/", &address))
+        .header("Origin", "https://foobar.example.test")
+        .header("Access-Control-Request-Method", "GET")
+        .send()
+        .await
+        .expect("Failed to execute request");
+
+    assert_eq!(200, resp.status());
+    assert_eq!(Some(""), resp.text().await.as_deref().ok());
 }
 
 fn setup_test_db() -> Pool<ConnectionManager<SqliteConnection>> {

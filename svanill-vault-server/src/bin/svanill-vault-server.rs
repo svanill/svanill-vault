@@ -79,6 +79,9 @@ struct Opt {
     /// Display only warn/error. Takes precedence over --verbose
     #[structopt(short = "q", long = "quiet")]
     quiet: bool,
+    /// CORS origin accepted ("*" for any, host otherwise, e.g. https://example.com)
+    #[structopt(long = "origin", default_value = "*")]
+    cors_origin: String,
 }
 
 fn setup_log(level: Option<log::Level>) {
@@ -196,6 +199,8 @@ async fn main() -> Result<()> {
         std::time::Duration::from_secs(60 * opt.auth_token_timeout as u64),
     );
 
+    let cors_origin = opt.cors_origin;
+
     let listener =
         TcpListener::bind(format!("{}:{}", opt.host, opt.port)).expect("Failed to bind port");
 
@@ -204,6 +209,7 @@ async fn main() -> Result<()> {
         crypto_key,
         pool,
         s3_fs,
+        cors_origin,
     };
 
     let _server = run(listener, data)?.await;
