@@ -80,7 +80,11 @@ struct Opt {
     #[structopt(short = "q", long = "quiet")]
     quiet: bool,
     /// CORS origin accepted ("*" for any, host otherwise, e.g. https://example.com)
-    #[structopt(long = "origin", default_value = "*")]
+    #[structopt(
+        long = "origin",
+        default_value = "*",
+        env = "SVANILL_VAULT_CORS_ORIGIN"
+    )]
     cors_origin: String,
 }
 
