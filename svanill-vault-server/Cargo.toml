@@ -53,3 +53,6 @@ tokio = "1.13.0"
 ctor = "0.1.21"
 rusoto_mock = { version = "0.47.0", default-features = false, features = ["rustls"] }
 actix-rt = "2.4.0"
+
+[profile.release]
+debug = true
