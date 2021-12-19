@@ -64,7 +64,6 @@ jobs:
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
         run: |
           strip target/release/svanill-vault-cli
-          strip target/release/svanill-vault-server
 
       - name: Upload artifacts (linux/macos)
         if: matrix.os != 'windows-latest'
