@@ -5,6 +5,8 @@ use actix_web::{http, web, App, HttpServer};
 use crate::auth::tokens_cache::TokensCache;
 use crate::file_server::FileServer;
 use crate::http::handlers::{config_handlers, render_40x, render_500};
+use crate::http::sentry_middleware::enrich_sentry_event_with_request_metadata;
+use actix_web::dev::Service;
 use diesel::{
     r2d2::{self, ConnectionManager},
     SqliteConnection,
@@ -56,6 +58,10 @@ pub fn run(listener: TcpListener, data: AppData) -> Result<Server, std::io::Erro
             .wrap(ErrorHandlers::new().handler(http::StatusCode::BAD_REQUEST, render_40x))
             .wrap(Logger::default())
             .wrap(cors_handler)
+            .wrap_fn(|req, srv| {
+                enrich_sentry_event_with_request_metadata(&req);
+                srv.call(req)
+            })
             .configure(config_handlers)
     })
     .listen(listener)?

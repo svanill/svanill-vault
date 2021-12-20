@@ -140,6 +140,7 @@ async fn main() -> Result<()> {
     let _guard = sentry::init(sentry::ClientOptions {
         release: Some(format!("svanill-vault-server@{}", std::env!("GIT_HASH")).into()),
         attach_stacktrace: true,
+        in_app_include: vec!["svanill"],
         ..Default::default()
     });
 
