@@ -45,10 +45,15 @@ fn setup_fake_random_key() -> hmac::Key {
 
 pub trait AppDataBuilder {
     fn new() -> Self;
+    #[must_use]
     fn tokens_cache(self, tokens_cache: TokensCache) -> Self;
+    #[must_use]
     fn crypto_key(self, crypto_key: hmac::Key) -> Self;
+    #[must_use]
     fn pool(self, pool: Pool<ConnectionManager<SqliteConnection>>) -> Self;
+    #[must_use]
     fn s3_fs(self, s3_fs: FileServer) -> Self;
+    #[must_use]
     fn cors_origin(self, origin: String) -> Self;
 }
 
