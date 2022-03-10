@@ -1,5 +1,5 @@
 use crate::file_server::FileServer;
-use actix_http::http::StatusCode;
+use actix_http::StatusCode;
 use ctor::ctor;
 use diesel::{
     r2d2::{self, ConnectionManager},
@@ -214,7 +214,7 @@ async fn cors_origin_not_allowed() {
 
     assert_eq!(400, resp.status());
     assert_eq!(
-        Some("Origin is not allowed to make this request."),
+        Some("Origin is not allowed to make this request"),
         resp.text().await.as_deref().ok()
     );
 }
@@ -231,11 +231,8 @@ async fn cors_origin_request_method_missing() {
         .await
         .expect("Failed to execute request");
 
-    assert_eq!(400, resp.status());
-    assert_eq!(
-        Some("Request header `Access-Control-Request-Method` is required but is missing."),
-        resp.text().await.as_deref().ok()
-    );
+    assert_eq!(401, resp.status());
+    assert_eq!(Some(""), resp.text().await.as_deref().ok());
 }
 
 #[actix_rt::test]
