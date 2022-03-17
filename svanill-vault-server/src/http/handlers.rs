@@ -236,7 +236,7 @@ async fn remove_file(
         .into());
     };
 
-    let exts = req.extensions();
+    let exts = std::rc::Rc::new(req.extensions());
     let username = &exts.get::<Username>().unwrap().0;
 
     s3_fs
