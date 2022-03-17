@@ -1,5 +1,4 @@
 use crate::file_server::FileServerError;
-use actix_http::ResponseBuilder;
 use actix_web::{error, http::header, http::StatusCode};
 use serde::Deserializer;
 use serde::{ser::Serializer, Deserialize};
@@ -55,10 +54,9 @@ impl ApiError {
 
 impl error::ResponseError for ApiError {
     fn error_response(&self) -> actix_web::HttpResponse {
-        ResponseBuilder::new(self.status_code())
+        actix_web::HttpResponse::build(self.status_code())
             .insert_header((header::CONTENT_TYPE, "application/json; charset=utf-8"))
             .body(self.to_string())
-            .into()
     }
 
     fn status_code(&self) -> StatusCode {
