@@ -1,10 +1,10 @@
 [package]
 name = "svanill-vault-server"
 description = "svanill-vault, the server"
-version = "0.4.2"
+version = "0.5.0"
 authors = ["Riccardo Attilio Galli <riccardo@sideralis.org>"]
 repository = "https://github.com/svanill/svanill-vault-server"
-edition = "2018"
+edition = "2021"
 license = "AGPL-3.0-or-later"
 readme = "README.md"
 
