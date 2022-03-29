@@ -85,7 +85,7 @@ impl FileServer {
                 .unwrap_or_default()
                 .into_iter()
                 .filter(|x| x.key.is_some())
-                .map(|obj| async {
+                .map(|obj| async move {
                     let key = obj.key.unwrap(); // always ok, we filtered for Some(key) only
                     let size = obj.size.unwrap_or_default();
 

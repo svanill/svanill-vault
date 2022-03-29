@@ -141,6 +141,10 @@ async fn main() -> Result<()> {
         release: Some(format!("svanill-vault-server@{}", std::env!("GIT_HASH")).into()),
         attach_stacktrace: true,
         in_app_include: vec!["svanill"],
+        session_mode: sentry::SessionMode::Request,
+        auto_session_tracking: true,
+        sample_rate: 1.0,
+        traces_sample_rate: 1.0,
         ..Default::default()
     });
 
