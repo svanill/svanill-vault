@@ -4,6 +4,7 @@ use diesel::r2d2::{self, ConnectionManager};
 use ring::{hmac, rand};
 use rusoto_signature::region::Region;
 use std::env;
+use std::fmt::Write as _;
 use std::net::TcpListener;
 use std::path::Path;
 use structopt::StructOpt;
@@ -92,10 +93,10 @@ fn setup_log(level: Option<log::Level>) {
     if let Some(level) = level {
         let mut rust_log = env::var("RUST_LOG").unwrap_or_default();
 
-        rust_log.push_str(&format!(
+        write!(rust_log,
             ",{level},rusoto={level},actix_cors={level},actix_rt={level},actix_http={level},actix_web={level},actix_server={level}",
             level = level
-        ));
+        ).unwrap();
 
         env::set_var("RUST_LOG", rust_log);
     }
