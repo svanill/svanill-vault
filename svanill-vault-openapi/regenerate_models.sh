@@ -21,6 +21,7 @@ podman run -u $(id -u) --rm -v ${PWD}/tmp_build:/local \
     -o /local/out/
 
 sed -i 's/crate::models/super/g' tmp_build/out/src/models/*.rs
+sed -i 's/PartialEq/PartialEq, Eq/g' tmp_build/out/src/models/*.rs
 
 cp -R tmp_build/out/src/models/ src/models
 rm -fr tmp_build
