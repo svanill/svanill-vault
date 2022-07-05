@@ -1,7 +1,4 @@
-
-
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct HateoasFileRetrieveUrl {
     #[serde(rename = "href")]
     pub href: String,
@@ -11,11 +8,6 @@ pub struct HateoasFileRetrieveUrl {
 
 impl HateoasFileRetrieveUrl {
     pub fn new(href: String, rel: String) -> HateoasFileRetrieveUrl {
-        HateoasFileRetrieveUrl {
-            href,
-            rel,
-        }
+        HateoasFileRetrieveUrl { href, rel }
     }
 }
-
-

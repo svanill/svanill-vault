@@ -1,7 +1,4 @@
-
-
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct RetrieveListOfUserFilesResponseContentItemContent {
     #[serde(rename = "checksum")]
     pub checksum: String,
@@ -14,7 +11,12 @@ pub struct RetrieveListOfUserFilesResponseContentItemContent {
 }
 
 impl RetrieveListOfUserFilesResponseContentItemContent {
-    pub fn new(checksum: String, filename: String, size: i32, url: String) -> RetrieveListOfUserFilesResponseContentItemContent {
+    pub fn new(
+        checksum: String,
+        filename: String,
+        size: i32,
+        url: String,
+    ) -> RetrieveListOfUserFilesResponseContentItemContent {
         RetrieveListOfUserFilesResponseContentItemContent {
             checksum,
             filename,
@@ -23,5 +25,3 @@ impl RetrieveListOfUserFilesResponseContentItemContent {
         }
     }
 }
-
-

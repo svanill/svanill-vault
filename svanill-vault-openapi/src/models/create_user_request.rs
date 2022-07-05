@@ -1,7 +1,4 @@
-
-
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct CreateUserRequest {
     /// one or more ascii letters or numbers, underscores and hyphens. Must start with letters or numbers.
     #[serde(rename = "username")]
@@ -23,5 +20,3 @@ impl CreateUserRequest {
         }
     }
 }
-
-

@@ -1,7 +1,4 @@
-
-
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct RetrieveListOfUserFilesResponse {
     #[serde(rename = "status")]
     pub status: i32,
@@ -10,12 +7,10 @@ pub struct RetrieveListOfUserFilesResponse {
 }
 
 impl RetrieveListOfUserFilesResponse {
-    pub fn new(status: i32, content: Vec<super::RetrieveListOfUserFilesResponseContentItem>) -> RetrieveListOfUserFilesResponse {
-        RetrieveListOfUserFilesResponse {
-            status,
-            content,
-        }
+    pub fn new(
+        status: i32,
+        content: Vec<super::RetrieveListOfUserFilesResponseContentItem>,
+    ) -> RetrieveListOfUserFilesResponse {
+        RetrieveListOfUserFilesResponse { status, content }
     }
 }
-
-

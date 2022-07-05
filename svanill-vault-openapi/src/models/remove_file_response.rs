@@ -1,7 +1,4 @@
-
-
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct RemoveFileResponse {
     #[serde(rename = "status")]
     pub status: i32,
@@ -9,10 +6,6 @@ pub struct RemoveFileResponse {
 
 impl RemoveFileResponse {
     pub fn new(status: i32) -> RemoveFileResponse {
-        RemoveFileResponse {
-            status,
-        }
+        RemoveFileResponse { status }
     }
 }
-
-

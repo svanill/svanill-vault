@@ -1,7 +1,4 @@
-
-
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct RequestUploadUrlRequestBody {
     /// the name of the file to upload
     #[serde(rename = "filename")]
@@ -10,10 +7,6 @@ pub struct RequestUploadUrlRequestBody {
 
 impl RequestUploadUrlRequestBody {
     pub fn new(filename: String) -> RequestUploadUrlRequestBody {
-        RequestUploadUrlRequestBody {
-            filename,
-        }
+        RequestUploadUrlRequestBody { filename }
     }
 }
-
-

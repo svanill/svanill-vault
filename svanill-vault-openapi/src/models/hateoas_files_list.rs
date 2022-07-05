@@ -1,7 +1,4 @@
-
-
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct HateoasFilesList {
     #[serde(rename = "href")]
     pub href: String,
@@ -11,11 +8,6 @@ pub struct HateoasFilesList {
 
 impl HateoasFilesList {
     pub fn new(href: String, rel: String) -> HateoasFilesList {
-        HateoasFilesList {
-            href,
-            rel,
-        }
+        HateoasFilesList { href, rel }
     }
 }
-
-

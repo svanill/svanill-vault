@@ -1,7 +1,4 @@
-
-
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct HateoasRequestAuthChallenge {
     #[serde(rename = "href")]
     pub href: String,
@@ -11,11 +8,6 @@ pub struct HateoasRequestAuthChallenge {
 
 impl HateoasRequestAuthChallenge {
     pub fn new(href: String, rel: String) -> HateoasRequestAuthChallenge {
-        HateoasRequestAuthChallenge {
-            href,
-            rel,
-        }
+        HateoasRequestAuthChallenge { href, rel }
     }
 }
-
-
