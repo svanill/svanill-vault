@@ -112,7 +112,7 @@ async fn auth_user_answer_challenge(
         }
 
         // Generate a new signed token
-        let token = AuthToken::new(&*crypto_key);
+        let token = AuthToken::new(&crypto_key);
         let token_as_string = token.to_string();
 
         // Store the token, alongside the user it represent
