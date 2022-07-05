@@ -1,7 +1,4 @@
-
-
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct HateoasFileUploadUrl {
     #[serde(rename = "href")]
     pub href: String,
@@ -12,7 +9,11 @@ pub struct HateoasFileUploadUrl {
 }
 
 impl HateoasFileUploadUrl {
-    pub fn new(href: String, rel: String, form_data: ::std::collections::HashMap<String, String>) -> HateoasFileUploadUrl {
+    pub fn new(
+        href: String,
+        rel: String,
+        form_data: ::std::collections::HashMap<String, String>,
+    ) -> HateoasFileUploadUrl {
         HateoasFileUploadUrl {
             href,
             rel,
@@ -20,5 +21,3 @@ impl HateoasFileUploadUrl {
         }
     }
 }
-
-

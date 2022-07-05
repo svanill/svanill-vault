@@ -1,7 +1,4 @@
-
-
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct HateoasAnswerAuthChallenge {
     #[serde(rename = "rel")]
     pub rel: String,
@@ -11,11 +8,6 @@ pub struct HateoasAnswerAuthChallenge {
 
 impl HateoasAnswerAuthChallenge {
     pub fn new(rel: String, href: String) -> HateoasAnswerAuthChallenge {
-        HateoasAnswerAuthChallenge {
-            rel,
-            href,
-        }
+        HateoasAnswerAuthChallenge { rel, href }
     }
 }
-
-

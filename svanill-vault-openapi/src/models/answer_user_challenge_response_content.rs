@@ -1,7 +1,4 @@
-
-
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct AnswerUserChallengeResponseContent {
     #[serde(rename = "token")]
     pub token: String,
@@ -9,10 +6,6 @@ pub struct AnswerUserChallengeResponseContent {
 
 impl AnswerUserChallengeResponseContent {
     pub fn new(token: String) -> AnswerUserChallengeResponseContent {
-        AnswerUserChallengeResponseContent {
-            token,
-        }
+        AnswerUserChallengeResponseContent { token }
     }
 }
-
-

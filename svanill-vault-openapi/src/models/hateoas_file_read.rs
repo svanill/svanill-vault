@@ -1,7 +1,4 @@
-
-
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct HateoasFileRead {
     #[serde(rename = "rel")]
     pub rel: String,
@@ -11,11 +8,6 @@ pub struct HateoasFileRead {
 
 impl HateoasFileRead {
     pub fn new(rel: String, href: String) -> HateoasFileRead {
-        HateoasFileRead {
-            rel,
-            href,
-        }
+        HateoasFileRead { rel, href }
     }
 }
-
-

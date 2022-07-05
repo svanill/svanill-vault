@@ -1,7 +1,4 @@
-
-
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct AskForTheChallengeResponseContent {
     #[serde(rename = "challenge")]
     pub challenge: String,
@@ -9,10 +6,6 @@ pub struct AskForTheChallengeResponseContent {
 
 impl AskForTheChallengeResponseContent {
     pub fn new(challenge: String) -> AskForTheChallengeResponseContent {
-        AskForTheChallengeResponseContent {
-            challenge,
-        }
+        AskForTheChallengeResponseContent { challenge }
     }
 }
-
-
