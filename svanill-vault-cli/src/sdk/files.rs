@@ -33,7 +33,7 @@ pub fn request_upload_url(
         let opt_entity: Option<RequestUploadUrlResponse> = serde_json::from_str(&content).ok();
 
         if let Some(entity) = opt_entity {
-            return Ok(entity.links);
+            return Ok(*entity.links);
         }
     };
 

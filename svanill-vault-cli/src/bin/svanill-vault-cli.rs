@@ -261,7 +261,7 @@ fn main() -> Result<()> {
             let links = request_upload_url(&conf, &remote_name)?;
 
             upload(
-                links.upload_url,
+                *links.upload_url,
                 remote_name.clone(),
                 String::from_utf8(local_content)?,
             )?;

@@ -28,7 +28,7 @@ pub fn ls(
                         .filename
                         .trim_start_matches(&format!("users/{}/", &conf.username))
                         .to_owned();
-                    c.content
+                    *c.content
                 })
                 // ignore keys containing `/` (not pushed by svanill-cli)
                 .filter(|c| !c.filename.contains('/'))
