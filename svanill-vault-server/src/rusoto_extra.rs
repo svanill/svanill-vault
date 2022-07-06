@@ -289,8 +289,8 @@ mod signature {
 
     #[inline]
     fn hmac(secret: &[u8], message: &[u8]) -> Hmac<Sha256> {
-        let mut hmac = Hmac::<Sha256>::new_varkey(secret).expect("failed to create hmac");
-        hmac.input(message);
+        let mut hmac = Hmac::<Sha256>::new_from_slice(secret).expect("failed to create hmac");
+        hmac.update(message);
         hmac
     }
 
@@ -303,19 +303,14 @@ mod signature {
         service: &str,
     ) -> String {
         let date_str = date.format("%Y%m%d");
-        let date_hmac = hmac(format!("AWS4{}", secret).as_bytes(), date_str.as_bytes())
-            .result()
-            .code();
-        let region_hmac = hmac(date_hmac.as_ref(), region.as_bytes()).result().code();
-        let service_hmac = hmac(region_hmac.as_ref(), service.as_bytes())
-            .result()
-            .code();
-        let signing_hmac = hmac(service_hmac.as_ref(), b"aws4_request").result().code();
+        let date_hmac = hmac(format!("AWS4{}", secret).as_bytes(), date_str.as_bytes()).finalize();
+        let region_hmac = hmac(&date_hmac.into_bytes(), region.as_bytes()).finalize();
+        let service_hmac = hmac(&region_hmac.into_bytes(), service.as_bytes()).finalize();
+        let signing_hmac = hmac(&service_hmac.into_bytes(), b"aws4_request").finalize();
         hex::encode(
-            hmac(signing_hmac.as_ref(), string_to_sign.as_bytes())
-                .result()
-                .code()
-                .as_ref(),
+            hmac(&signing_hmac.into_bytes(), string_to_sign.as_bytes())
+                .finalize()
+                .into_bytes(),
         )
     }
 }
