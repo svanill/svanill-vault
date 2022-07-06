@@ -1344,6 +1344,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "md-5"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "658646b21e0b72f7866c7038ab086d3d5e1cd6271f060fd37defb241949d0582"
+dependencies = [
+ "digest 0.10.3",
+]
+
+[[package]]
 name = "memchr"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1942,7 +1951,7 @@ dependencies = [
  "http",
  "hyper",
  "log",
- "md-5",
+ "md-5 0.9.1",
  "percent-encoding",
  "pin-project-lite",
  "rusoto_credential",
@@ -2476,7 +2485,7 @@ dependencies = [
  "assert_cmd",
  "atty",
  "confy",
- "md-5",
+ "md-5 0.10.1",
  "mockito",
  "rand 0.7.3",
  "reqwest",
