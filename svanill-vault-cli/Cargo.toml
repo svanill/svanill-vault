@@ -10,7 +10,7 @@ readme = "README.md"
 
 [dependencies]
 svanill-vault-openapi = { path = "../svanill-vault-openapi", version = "0.1" }
-structopt = "0.3.14"
+structopt = "0.3.26"
 atty = "0.2.14"
 anyhow = "1.0.31"
 thiserror = "1.0.19"
