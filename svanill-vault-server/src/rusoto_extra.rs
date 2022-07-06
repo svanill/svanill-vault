@@ -4,7 +4,7 @@ use rusoto_core::Region;
 use rusoto_signature::signature::SignedRequest;
 use serde::ser::{Serialize, SerializeSeq, Serializer};
 use std::collections::HashMap;
-use time::Date;
+use time::{Date, Month};
 
 // Policy explanation:
 // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html
@@ -237,9 +237,9 @@ impl<'a> PostPolicy<'a> {
 
         let policy_as_base64 = base64::encode(policy_as_json);
 
-        let signature_date = Date::try_from_ymd(
-            current_time.date().year() as i32,
-            current_time.date().month() as u8,
+        let signature_date = Date::from_calendar_date(
+            current_time.date().year(),
+            Month::try_from(current_time.date().month() as u8).unwrap(),
             current_time.date().day() as u8,
         )
         .unwrap();
@@ -285,7 +285,7 @@ impl<'a> PostPolicy<'a> {
 mod signature {
     use hmac::{Hmac, Mac};
     use sha2::Sha256;
-    use time::Date;
+    use time::{format_description, Date};
 
     #[inline]
     fn hmac(secret: &[u8], message: &[u8]) -> Hmac<Sha256> {
@@ -302,7 +302,8 @@ mod signature {
         region: &str,
         service: &str,
     ) -> String {
-        let date_str = date.format("%Y%m%d");
+        let date_format = format_description::parse("%Y%m%d").unwrap();
+        let date_str = date.format(&date_format).unwrap();
         let date_hmac = hmac(format!("AWS4{}", secret).as_bytes(), date_str.as_bytes()).finalize();
         let region_hmac = hmac(&date_hmac.into_bytes(), region.as_bytes()).finalize();
         let service_hmac = hmac(&region_hmac.into_bytes(), service.as_bytes()).finalize();
