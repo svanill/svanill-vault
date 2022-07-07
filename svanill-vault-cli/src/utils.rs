@@ -10,7 +10,7 @@ pub fn gen_random_filename() -> String {
 
     (0..FILENAME_LEN)
         .map(|_| {
-            let idx = rng.gen_range(0, CHARSET.len());
+            let idx = rng.gen_range(0..CHARSET.len());
             CHARSET[idx] as char
         })
         .collect::<String>()
