@@ -1798,7 +1798,7 @@ dependencies = [
  "hyper-rustls 0.22.1",
  "lazy_static",
  "log",
- "rusoto_credential",
+ "rusoto_credential 0.47.0",
  "rusoto_signature",
  "rustc_version 0.4.0",
  "serde",
@@ -1812,6 +1812,24 @@ name = "rusoto_credential"
 version = "0.47.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a46b67db7bb66f5541e44db22b0a02fed59c9603e146db3a9e633272d3bac2f"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "dirs-next",
+ "futures",
+ "hyper",
+ "serde",
+ "serde_json",
+ "shlex",
+ "tokio",
+ "zeroize",
+]
+
+[[package]]
+name = "rusoto_credential"
+version = "0.48.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee0a6c13db5aad6047b6a44ef023dbbc21a056b6dab5be3b79ce4283d5c02d05"
 dependencies = [
  "async-trait",
  "chrono",
@@ -1872,7 +1890,7 @@ dependencies = [
  "md-5 0.9.1",
  "percent-encoding",
  "pin-project-lite",
- "rusoto_credential",
+ "rusoto_credential 0.47.0",
  "rustc_version 0.4.0",
  "serde",
  "sha2 0.9.8",
@@ -2412,7 +2430,7 @@ dependencies = [
  "reqwest",
  "ring",
  "rusoto_core",
- "rusoto_credential",
+ "rusoto_credential 0.48.0",
  "rusoto_mock",
  "rusoto_s3",
  "rusoto_signature",

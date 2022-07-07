@@ -27,7 +27,7 @@ hex = "0.4.3"
 lru-cache = "0.1.2"
 rusoto_core = { version = "0.47.0", default-features = false, features = ["rustls", "rustls-webpki"] }
 rusoto_s3 = { version = "0.47.0", default-features = false, features = ["rustls"] }
-rusoto_credential = "0.47.0"
+rusoto_credential = "0.48.0"
 rusoto_signature = "0.47.0"
 futures = "0.3.21"
 anyhow = "1.0.58"
