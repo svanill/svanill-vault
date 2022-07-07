@@ -1,7 +1,7 @@
 use crate::rusoto_extra::PostPolicy;
 use chrono::Utc;
 use futures::future::try_join_all;
-use hyper_rustls::HttpsConnector;
+use hyper_rustls::HttpsConnectorBuilder;
 use rusoto_core::request::TlsError;
 use rusoto_core::{HttpClient, Region, RusotoError};
 use rusoto_credential::{AwsCredentials, ChainProvider, CredentialsError, ProvideAwsCredentials};
@@ -52,7 +52,11 @@ impl FileServer {
 
         let credentials = chain.credentials().await?;
 
-        let tls_connector = HttpsConnector::with_webpki_roots();
+        let tls_connector = HttpsConnectorBuilder::new()
+            .with_webpki_roots()
+            .https_only()
+            .enable_http2()
+            .build();
         let http_client = HttpClient::from_connector(tls_connector);
 
         let client = S3Client::new_with(http_client, chain, region.clone());
