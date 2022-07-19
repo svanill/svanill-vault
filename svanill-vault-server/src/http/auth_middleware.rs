@@ -21,7 +21,7 @@ fn validate_token(
 pub async fn auth_validator(
     req: ServiceRequest,
     credentials: BearerAuth,
-) -> Result<ServiceRequest, Error> {
+) -> Result<ServiceRequest, (Error, ServiceRequest)> {
     let maybe_tokens_cache = req.app_data::<web::Data<Arc<RwLock<TokensCache>>>>();
     let tokens_cache =
         maybe_tokens_cache.expect("the tokens_cache have not been setup to this route");
@@ -31,8 +31,9 @@ pub async fn auth_validator(
             req.extensions_mut().insert(user);
             Ok(req)
         }
-        None => {
-            Err(ApiError::new(StatusCode::UNAUTHORIZED, 401, "Unhauthorized".to_owned()).into())
-        }
+        None => Err((
+            ApiError::new(StatusCode::UNAUTHORIZED, 401, "Unhauthorized".to_owned()).into(),
+            req,
+        )),
     }
 }
