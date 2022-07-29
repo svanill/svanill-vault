@@ -51,7 +51,7 @@ features = ["rustls", "backtrace", "contexts", "panic", "reqwest", "tracing"]
 
 [dev-dependencies]
 tokio = "1.13.1"
-ctor = "0.1.22"
+ctor = "0.1.23"
 rusoto_mock = { version = "0.48.0", default-features = false, features = ["rustls"] }
 actix-rt = "2.7.0"
 
