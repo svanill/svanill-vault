@@ -12,7 +12,7 @@ readme = "README.md"
 svanill-vault-openapi = { path = "../svanill-vault-openapi", version = "0.1" }
 structopt = "0.3.26"
 atty = "0.2.14"
-anyhow = "1.0.58"
+anyhow = "1.0.59"
 thiserror = "1.0.31"
 reqwest = { version = "0.11.9", default-features = false, features=["blocking", "gzip", "json", "rustls-tls", "rustls-tls-webpki-roots"] }
 serde = { version = "1.0.140", features = ["derive"] }
