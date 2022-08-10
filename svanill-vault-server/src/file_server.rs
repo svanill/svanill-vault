@@ -1,4 +1,4 @@
-use crate::rusoto_extra::PostPolicy;
+use crate::post_policy::PostPolicy;
 use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_s3::error::DeleteObjectError;
 use aws_sdk_s3::error::HeadObjectError;

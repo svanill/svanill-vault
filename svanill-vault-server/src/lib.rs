@@ -8,7 +8,7 @@ pub mod db;
 pub mod errors;
 pub mod file_server;
 pub mod http;
-mod rusoto_extra;
+mod post_policy;
 pub mod server;
 
 #[cfg(test)]
