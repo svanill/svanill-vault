@@ -38,7 +38,7 @@ cargo build
 
 The build artifacts end in the target folder at the root of the project (as usual for multicrate Rust repositories).
 
-AWS credential by default are read by env variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, but there are other fallbacks, see [rusoto doc](https://github.com/rusoto/rusoto/blob/master/AWS-CREDENTIALS.md).
+AWS credential by default are read by env variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, but there are other fallbacks, see [aws-sdk doc](https://docs.aws.amazon.com/sdk-for-rust/latest/dg/credentials.html).
 You can also pass them as args (see `--help`).
 
 ```
@@ -153,4 +153,10 @@ so that you could simply run
 cargo run svanill-vault-cli -- ls
 ```
 
+### Troubleshooting
 
+If svanill-vault-server exit with one of the following errors, you likely have to increase the limit for open files on your machine (e.g. `ulimit -n 65536`)
+
+- `{ code: 24, kind: Uncategorized, message: "Too many open files" }`
+- `RecvError`
+- `{ code: 104, kind: ConnectionReset, message: "Connection reset by peer" }`
