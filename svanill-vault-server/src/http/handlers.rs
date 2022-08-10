@@ -161,6 +161,7 @@ async fn request_upload_url(
 
     let (upload_url, retrieve_url, form_data) = s3_fs
         .get_post_policy_data(username, filename)
+        .await
         .map_err(VaultError::PolicyDataError)?;
 
     Ok(HttpResponse::Ok().json(

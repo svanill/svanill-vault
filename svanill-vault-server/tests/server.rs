@@ -1,5 +1,11 @@
 use crate::file_server::FileServer;
 use actix_http::StatusCode;
+use aws_config::RetryConfig;
+use aws_sdk_s3::Client as S3Client;
+use aws_sdk_s3::{Credentials, Region};
+use aws_smithy_client::test_connection::TestConnection;
+use aws_smithy_http::body::SdkBody;
+
 use ctor::ctor;
 use diesel::{
     r2d2::{self, ConnectionManager},
@@ -8,9 +14,6 @@ use diesel::{
 use r2d2::Pool;
 use ring::hmac;
 use ring::test::rand::FixedByteRandom;
-use rusoto_core::Region;
-use rusoto_credential::AwsCredentials;
-use rusoto_mock::{MockCredentialsProvider, MockRequestDispatcher};
 use std::net::TcpListener;
 use svanill_vault_openapi::{
     AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
@@ -62,7 +65,7 @@ impl AppDataBuilder for AppData {
         let tokens_cache = TokensCache::default();
         let crypto_key = setup_fake_random_key();
         let pool = setup_test_db();
-        let s3_fs = setup_s3_fs(MockRequestDispatcher::default());
+        let s3_fs = setup_s3_fs(TestConnection::<SdkBody>::new(Vec::new()));
         let cors_origin = String::from("https://example.com");
 
         AppData {
@@ -466,14 +469,19 @@ async fn answer_auth_challenge_ok() {
     assert_ne!(json_resp.content.token, json_resp2.content.token);
 }
 
-fn setup_s3_fs(s3_resp_mock: MockRequestDispatcher) -> FileServer {
-    let region = Region::EuCentral1;
+fn setup_s3_fs(s3_resp_mock_conn: TestConnection<SdkBody>) -> FileServer {
+    let region = Region::new("eu-central-1");
     let bucket = "test_bucket".to_string();
 
-    let provider = MockCredentialsProvider;
-    let credentials = AwsCredentials::new("mock_key", "mock_secret", None, None);
+    let credentials = Credentials::new("mock_key", "mock_secret", None, None, "mock_provider");
 
-    let client = rusoto_s3::S3Client::new_with(s3_resp_mock, provider, Default::default());
+    let s3_config = aws_sdk_s3::Config::builder()
+        .credentials_provider(credentials.clone())
+        .region(region.clone())
+        .retry_config(RetryConfig::disabled())
+        .build();
+
+    let client = S3Client::from_conf_conn(s3_config, s3_resp_mock_conn);
 
     FileServer {
         region,
@@ -510,8 +518,13 @@ async fn request_upload_url_ok() {
         .expect("Cannot decode JSON response");
 
     assert_eq!(200, json_resp.status);
-    assert!(!json_resp.links.upload_url.href.is_empty());
-    assert!(!json_resp.links.retrieve_url.href.is_empty());
+    assert_eq!(
+        json_resp.links.upload_url.href,
+        "https://test_bucket.s3.eu-central-1.amazonaws.com"
+    );
+    assert!(json_resp.links.retrieve_url.href.starts_with(
+        "https://s3.eu-central-1.amazonaws.com/test_bucket/users/test_user_2/test_filename?"
+    ));
 }
 
 #[actix_rt::test]
@@ -576,30 +589,44 @@ async fn list_user_files_ok() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let s3_resp_mock = MockRequestDispatcher::default().with_body(
-        r#"<?xml version="1.0" encoding="UTF-8"?>
-        <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-          <Name>quotes</Name>
-          <KeyCount>1</KeyCount>
-          <MaxKeys>3</MaxKeys>
-          <IsTruncated>false</IsTruncated>
-          <Contents>
-            <Key>users/test_user_2/some_object_1.txt</Key>
-            <LastModified>2013-09-17T18:07:53.000Z</LastModified>
-            <ETag>"599bab3ed2c697f1d26842727561fd94"</ETag>
-            <Size>857</Size>
-            <StorageClass>REDUCED_REDUNDANCY</StorageClass>
-          </Contents>
-          <Contents>
-            <Key>users/test_user_2/any/path/is/ok.txt</Key>
-            <LastModified>2013-09-17T18:07:53.000Z</LastModified>
-            <ETag>"d26842727561fd94599bab3ed2c697f1"</ETag>
-            <Size>346</Size>
-            <StorageClass>REDUCED_REDUNDANCY</StorageClass>
-          </Contents>
-        </ListBucketResult>"#,
-    );
-    let s3_fs = setup_s3_fs(s3_resp_mock);
+    let s3_conn_mock = TestConnection::new(vec![
+        // Events
+        (
+            // Request
+            http::Request::builder()
+                .body(aws_smithy_http::body::SdkBody::from("some request"))
+                .unwrap(),
+            // Response
+            http::Response::builder()
+                .status(200)
+                .body(aws_smithy_http::body::SdkBody::from(
+                    r#"<?xml version="1.0" encoding="UTF-8"?>
+                    <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+                      <Name>quotes</Name>
+                      <KeyCount>1</KeyCount>
+                      <MaxKeys>3</MaxKeys>
+                      <IsTruncated>false</IsTruncated>
+                      <Contents>
+                        <Key>users/test_user_2/some_object_1.txt</Key>
+                        <LastModified>2013-09-17T18:07:53.000Z</LastModified>
+                        <ETag>"599bab3ed2c697f1d26842727561fd94"</ETag>
+                        <Size>857</Size>
+                        <StorageClass>REDUCED_REDUNDANCY</StorageClass>
+                      </Contents>
+                      <Contents>
+                        <Key>users/test_user_2/any/path/is/ok.txt</Key>
+                        <LastModified>2013-09-17T18:07:53.000Z</LastModified>
+                        <ETag>"d26842727561fd94599bab3ed2c697f1"</ETag>
+                        <Size>346</Size>
+                        <StorageClass>REDUCED_REDUNDANCY</StorageClass>
+                      </Contents>
+                    </ListBucketResult>"#,
+                ))
+                .unwrap(),
+        ),
+    ]);
+
+    let s3_fs = setup_s3_fs(s3_conn_mock);
 
     let address = spawn_app(
         AppData::new()
@@ -650,8 +677,21 @@ async fn list_user_files_s3_error() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let s3_resp_mock = MockRequestDispatcher::with_status(500).with_body("gibberish");
-    let s3_fs = setup_s3_fs(s3_resp_mock);
+    let s3_conn_mock = TestConnection::new(vec![
+        // Events
+        (
+            // Request
+            http::Request::builder()
+                .body(aws_smithy_http::body::SdkBody::from("some request"))
+                .unwrap(),
+            // Response
+            http::Response::builder()
+                .status(500)
+                .body(aws_smithy_http::body::SdkBody::from("gibberish"))
+                .unwrap(),
+        ),
+    ]);
+    let s3_fs = setup_s3_fs(s3_conn_mock);
 
     let address = spawn_app(
         AppData::new()
@@ -683,8 +723,21 @@ async fn delete_files_s3_error() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let s3_resp_mock = MockRequestDispatcher::with_status(400);
-    let s3_fs = setup_s3_fs(s3_resp_mock);
+    let s3_conn_mock = TestConnection::new(vec![
+        // Events
+        (
+            // Request
+            http::Request::builder()
+                .body(aws_smithy_http::body::SdkBody::from("some request"))
+                .unwrap(),
+            // Response
+            http::Response::builder()
+                .status(400) // this is what we are interested in
+                .body(aws_smithy_http::body::SdkBody::from("gibberish"))
+                .unwrap(),
+        ),
+    ]);
+    let s3_fs = setup_s3_fs(s3_conn_mock);
 
     let address = spawn_app(
         AppData::new()
@@ -716,8 +769,21 @@ async fn delete_files_missing_filename() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let s3_resp_mock = MockRequestDispatcher::with_status(400);
-    let s3_fs = setup_s3_fs(s3_resp_mock);
+    let s3_conn_mock = TestConnection::new(vec![
+        // Events
+        (
+            // Request
+            http::Request::builder()
+                .body(aws_smithy_http::body::SdkBody::from("some request"))
+                .unwrap(),
+            // Response
+            http::Response::builder()
+                .status(400) // this is what we are interested in
+                .body(aws_smithy_http::body::SdkBody::from("gibberish"))
+                .unwrap(),
+        ),
+    ]);
+    let s3_fs = setup_s3_fs(s3_conn_mock);
 
     let address = spawn_app(
         AppData::new()
@@ -749,8 +815,21 @@ async fn delete_files_ok() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let s3_resp_mock = MockRequestDispatcher::with_status(StatusCode::NO_CONTENT.as_u16());
-    let s3_fs = setup_s3_fs(s3_resp_mock);
+    let s3_conn_mock = TestConnection::new(vec![
+        // Events
+        (
+            // Request
+            http::Request::builder()
+                .body(aws_smithy_http::body::SdkBody::from("some request"))
+                .unwrap(),
+            // Response
+            http::Response::builder()
+                .status(StatusCode::NO_CONTENT) // this is what we are interested in
+                .body(aws_smithy_http::body::SdkBody::from("gibberish"))
+                .unwrap(),
+        ),
+    ]);
+    let s3_fs = setup_s3_fs(s3_conn_mock);
 
     let address = spawn_app(
         AppData::new()

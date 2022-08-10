@@ -1,8 +1,8 @@
 use anyhow::Result;
+use aws_config::meta::region::RegionProviderChain;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use ring::{hmac, rand};
-use rusoto_signature::region::Region;
 use std::env;
 use std::fmt::Write as _;
 use std::net::TcpListener;
@@ -94,7 +94,7 @@ fn setup_log(level: Option<log::Level>) {
         let mut rust_log = env::var("RUST_LOG").unwrap_or_default();
 
         write!(rust_log,
-            ",{level},rusoto={level},actix_cors={level},actix_rt={level},actix_http={level},actix_web={level},actix_server={level}",
+            ",{level},aws_config={level},actix_cors={level},actix_rt={level},actix_http={level},actix_web={level},actix_server={level}",
             level = level
         ).unwrap();
 
@@ -161,18 +161,23 @@ async fn main() -> Result<()> {
         env::set_var("AWS_SECRET_ACCESS_KEY", secret_access_key);
     }
 
-    let region = if let Some(s3_endpoint) = opt.s3_endpoint {
-        Region::Custom {
-            name: env::var("AWS_DEFAULT_REGION").unwrap_or_else(|_| "us-east-1".to_owned()),
-            endpoint: s3_endpoint,
-        }
-    } else {
-        Region::default()
-    };
+    // Check in order:
+    // env var AWS_REGION
+    // env var AWS_DEFAULT_REGION
+    // profile file
+    // EC2 IMDSv2
+    // When everything fails, default to `us-east-1`.
+    let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
+
+    let maybe_endpoint = opt
+        .s3_endpoint
+        .as_ref()
+        .map(|endpoint| aws_sdk_s3::Endpoint::immutable(endpoint.parse::<http::Uri>().unwrap()));
 
     let s3_fs = file_server::FileServer::new(
-        region,
+        region_provider,
         opt.s3_bucket,
+        maybe_endpoint,
         std::time::Duration::from_secs(opt.presigned_url_duration_in_min as u64 * 60),
     )
     .await?;
