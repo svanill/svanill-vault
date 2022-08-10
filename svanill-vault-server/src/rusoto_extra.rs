@@ -1,10 +1,8 @@
-use chrono::Datelike;
+use aws_sigv4::sign::{calculate_signature, generate_signing_key};
+use aws_types::region::Region;
 use chrono::{DateTime, Utc};
-use rusoto_core::Region;
-use rusoto_signature::signature::SignedRequest;
 use serde::ser::{Serialize, SerializeSeq, Serializer};
 use std::collections::HashMap;
-use time::{Date, Month};
 
 // Policy explanation:
 // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html
@@ -147,7 +145,7 @@ impl<'a> PostPolicy<'a> {
     }
 
     /// Create the form data using the policy
-    pub fn build_form_data(mut self) -> Result<(String, HashMap<String, String>), String> {
+    pub fn build_form_data(mut self) -> Result<HashMap<String, String>, String> {
         match self.content_length_range {
             Some((min_length, max_length)) if min_length > max_length => {
                 return Err(format!(
@@ -182,7 +180,6 @@ impl<'a> PostPolicy<'a> {
             return Err("Secret access key must be specified".to_string());
         }
 
-        let bucket_name = self.bucket_name.unwrap();
         let secret_access_key = self.secret_access_key.unwrap();
 
         let expiration = self
@@ -202,7 +199,7 @@ impl<'a> PostPolicy<'a> {
 
         let access_key_id = self.access_key_id.unwrap();
         let region = self.region.unwrap();
-        let region_name = region.name();
+        let region_name = region.as_ref();
 
         let x_amz_credential = format!(
             "{}/{}/{}/{}/aws4_request",
@@ -237,20 +234,11 @@ impl<'a> PostPolicy<'a> {
 
         let policy_as_base64 = base64::encode(policy_as_json);
 
-        let signature_date = Date::from_calendar_date(
-            current_time.date().year(),
-            Month::try_from(current_time.date().month() as u8).unwrap(),
-            current_time.date().day() as u8,
-        )
-        .unwrap();
+        let signature_date = std::time::SystemTime::now();
 
-        let x_amz_signature = signature::sign_string(
-            &policy_as_base64,
-            secret_access_key,
-            signature_date,
-            region_name,
-            "s3",
-        );
+        let signing_key =
+            generate_signing_key(secret_access_key, signature_date, region_name, "s3");
+        let x_amz_signature = calculate_signature(signing_key, policy_as_base64.as_bytes());
 
         self.form_data
             .insert("policy".to_string(), policy_as_base64);
@@ -265,54 +253,7 @@ impl<'a> PostPolicy<'a> {
         self.form_data
             .insert("x-amz-signature".to_string(), x_amz_signature);
 
-        let signed_request = SignedRequest::new("GET", "s3", region, "/");
-
-        let upload_url = format!(
-            "{}://{}.{}",
-            signed_request.scheme(),
-            bucket_name,
-            signed_request.hostname()
-        );
-
-        Ok((upload_url, self.form_data))
-    }
-}
-
-// Copied from rusoto/signature/src/signature.rs
-// because `sign_string` was not public and I wanted to
-// implement generate_presigned_post_policy in a way that
-// could be easily implemented in rusoto_signature
-mod signature {
-    use hmac::{Hmac, Mac};
-    use sha2::Sha256;
-    use time::{format_description, Date};
-
-    #[inline]
-    fn hmac(secret: &[u8], message: &[u8]) -> Hmac<Sha256> {
-        let mut hmac = Hmac::<Sha256>::new_from_slice(secret).expect("failed to create hmac");
-        hmac.update(message);
-        hmac
-    }
-
-    /// Takes a message and signs it using AWS secret, time, region keys and service keys.
-    pub fn sign_string(
-        string_to_sign: &str,
-        secret: &str,
-        date: Date,
-        region: &str,
-        service: &str,
-    ) -> String {
-        let date_format = format_description::parse("%Y%m%d").unwrap();
-        let date_str = date.format(&date_format).unwrap();
-        let date_hmac = hmac(format!("AWS4{}", secret).as_bytes(), date_str.as_bytes()).finalize();
-        let region_hmac = hmac(&date_hmac.into_bytes(), region.as_bytes()).finalize();
-        let service_hmac = hmac(&region_hmac.into_bytes(), service.as_bytes()).finalize();
-        let signing_hmac = hmac(&service_hmac.into_bytes(), b"aws4_request").finalize();
-        hex::encode(
-            hmac(&signing_hmac.into_bytes(), string_to_sign.as_bytes())
-                .finalize()
-                .into_bytes(),
-        )
+        Ok(self.form_data)
     }
 }
 
@@ -322,7 +263,7 @@ mod tests {
     use chrono::prelude::*;
 
     const BUCKET: &str = "the-bucket";
-    const REGION: Region = Region::EuCentral1;
+    const REGION: Region = Region::from_static("eu-central-1");
     const ACCESS_KEY_ID: &str = "foo_access_key";
     const SECRET_ACCESS_KEY: &str = "foo_secret_key";
     const OBJECT_KEY: &str = "the-object-key";
@@ -412,11 +353,8 @@ mod tests {
             .build_form_data();
 
         assert!(res.is_ok());
-        let (upload_url, form_data) = res.unwrap();
-        assert_eq!(
-            upload_url,
-            "https://the-bucket.s3.eu-central-1.amazonaws.com"
-        );
+        let form_data = res.unwrap();
+
         assert_eq!(form_data.get("key").unwrap(), "the-object-key");
 
         assert_eq!(form_data.get("bucket").unwrap(), "the-bucket");
@@ -464,7 +402,7 @@ mod tests {
 
         assert!(res.is_ok());
 
-        let (_, form_data) = res.unwrap();
+        let form_data = res.unwrap();
         dbg!(&form_data);
         assert_eq!(form_data.get("Content-Type").unwrap(), "some/type");
 
@@ -489,7 +427,7 @@ mod tests {
             .set_expiration(&expiration_date)
             .build_form_data();
 
-        let (_, form_data) = res.unwrap();
+        let form_data = res.unwrap();
 
         assert_eq!(form_data.get("a"), None);
 
@@ -513,7 +451,7 @@ mod tests {
             .set_expiration(&expiration_date)
             .build_form_data();
 
-        let (_, form_data) = res.unwrap();
+        let form_data = res.unwrap();
         dbg!(&form_data);
         assert_eq!(form_data.get("key").unwrap(), "foo");
 

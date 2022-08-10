@@ -1,15 +1,16 @@
 use crate::rusoto_extra::PostPolicy;
+use aws_config::meta::region::RegionProviderChain;
+use aws_sdk_s3::error::DeleteObjectError;
+use aws_sdk_s3::error::HeadObjectError;
+use aws_sdk_s3::error::ListObjectsV2Error;
+use aws_sdk_s3::presigning::config::PresigningConfig;
+use aws_sdk_s3::presigning::request::PresignedRequest;
+use aws_smithy_client::SdkError;
+use aws_smithy_types::{timeout, tristate::TriState};
+use aws_types::credentials::CredentialsError;
+use aws_types::region::Region;
 use chrono::Utc;
 use futures::future::try_join_all;
-use hyper_rustls::HttpsConnectorBuilder;
-use rusoto_core::request::TlsError;
-use rusoto_core::{HttpClient, Region, RusotoError};
-use rusoto_credential::{AwsCredentials, ChainProvider, CredentialsError, ProvideAwsCredentials};
-use rusoto_s3::util::{PreSignedRequest, PreSignedRequestOption};
-use rusoto_s3::{
-    DeleteObjectError, DeleteObjectRequest, GetObjectRequest, HeadObjectError, HeadObjectRequest,
-    ListObjectsV2Request, S3Client, S3,
-};
 use std::default::Default;
 use std::{collections::HashMap, ops::Add};
 use svanill_vault_openapi::RetrieveListOfUserFilesResponseContentItemContent;
@@ -20,46 +21,65 @@ type FileDTO = RetrieveListOfUserFilesResponseContentItemContent;
 #[derive(Error, Debug)]
 pub enum FileServerError {
     #[error("cannot retrieve object metadata")]
-    CannotRetrieveMetadata(#[from] RusotoError<HeadObjectError>),
+    CannotRetrieveMetadata(#[from] SdkError<HeadObjectError>),
     #[error("cannot retrieve files list")]
-    CannotRetrieveFilesList(String),
-    #[error("TLS error")]
-    TlsError(#[from] TlsError),
+    CannotRetrieveFilesList(#[from] SdkError<ListObjectsV2Error>),
     #[error("failed to obtain S3 credentials")]
     CredentialsError(#[from] CredentialsError),
+    #[error("missing credentials provider")]
+    MissingCredentialsProviderError,
     #[error("cannot delete file")]
-    CannotDelete(#[from] RusotoError<DeleteObjectError>),
+    CannotDelete(#[from] SdkError<DeleteObjectError>),
     #[error("cannot generate policy data form")]
     PolicyDataError(String),
+    #[error("cannot configure S3 region")]
+    RegionNotConfigured,
+    #[error("cannot sign request")]
+    CannotSignRequest,
 }
 
 pub struct FileServer {
     pub region: Region,
     pub bucket: String,
-    pub client: S3Client,
-    pub credentials: AwsCredentials,
+    pub client: aws_sdk_s3::Client,
+    pub credentials: aws_sdk_s3::Credentials,
     pub presigned_url_timeout: std::time::Duration,
 }
 
 impl FileServer {
     pub async fn new(
-        region: Region,
+        region_provider: RegionProviderChain,
         bucket: String,
+        maybe_endpoint: Option<aws_sdk_s3::Endpoint>,
         presigned_url_timeout: std::time::Duration,
     ) -> Result<FileServer, FileServerError> {
-        let mut chain = ChainProvider::new();
-        chain.set_timeout(std::time::Duration::from_millis(200));
+        let shared_config = aws_config::from_env().region(region_provider).load().await;
+        let region: Region = shared_config
+            .region()
+            .ok_or(FileServerError::RegionNotConfigured)?
+            .clone();
 
-        let credentials = chain.credentials().await?;
+        let credentials = shared_config
+            .credentials_provider()
+            .ok_or(FileServerError::MissingCredentialsProviderError)?
+            .as_ref()
+            .provide_credentials()
+            .await?;
 
-        let tls_connector = HttpsConnectorBuilder::new()
-            .with_webpki_roots()
-            .https_only()
-            .enable_http2()
-            .build();
-        let http_client = HttpClient::from_connector(tls_connector);
+        let api_timeouts = timeout::Api::new()
+            .with_call_attempt_timeout(TriState::Set(std::time::Duration::from_millis(200)));
+        let timeout_config = timeout::Config::new().with_api_timeouts(api_timeouts);
 
-        let client = S3Client::new_with(http_client, chain, region.clone());
+        let mut s3_config_builder =
+            aws_sdk_s3::config::Builder::from(&shared_config).timeout_config(timeout_config);
+
+        if let Some(endpoint) = maybe_endpoint {
+            s3_config_builder = s3_config_builder.endpoint_resolver(endpoint);
+        }
+
+        let s3_config = s3_config_builder.build();
+
+        let client = aws_sdk_s3::Client::from_conf(s3_config);
 
         Ok(FileServer {
             region,
@@ -71,17 +91,14 @@ impl FileServer {
     }
 
     pub async fn get_files_list(&self, username: &str) -> Result<Vec<FileDTO>, FileServerError> {
-        let list_request = ListObjectsV2Request {
-            bucket: self.bucket.clone(),
-            prefix: Some(format!("users/{}/", username)),
-            ..Default::default()
-        };
-
         let s3_objects = self
             .client
-            .list_objects_v2(list_request)
+            .list_objects_v2()
+            .bucket(&self.bucket)
+            .prefix(format!("users/{}/", username))
+            .send()
             .await
-            .map_err(|e| FileServerError::CannotRetrieveFilesList(e.to_string()))?;
+            .map_err(FileServerError::CannotRetrieveFilesList)?;
 
         let files: Vec<FileDTO> = try_join_all(
             s3_objects
@@ -91,26 +108,22 @@ impl FileServer {
                 .filter(|x| x.key.is_some())
                 .map(|obj| async move {
                     let key = obj.key.unwrap(); // always ok, we filtered for Some(key) only
-                    let size = obj.size.unwrap_or_default();
+                    let size = obj.size;
 
                     let etag = if let Some(etag) = obj.e_tag {
                         etag
                     } else {
-                        // e.g. etag may be missing, e.g. minio without 'erasure' option
-                        let head_req = HeadObjectRequest {
-                            bucket: self.bucket.clone(),
-                            key: key.clone(),
-                            ..Default::default()
-                        };
-
                         self.client
-                            .head_object(head_req)
+                            .head_object()
+                            .bucket(&self.bucket)
+                            .key(&key)
+                            .send()
                             .await?
                             .e_tag
                             .unwrap_or_default()
                     };
 
-                    let url = self.get_presigned_retrieve_url(key.clone());
+                    let url = self.get_presigned_retrieve_url_as_string(&key).await?;
 
                     let (_, filename) = split_object_key(username, &key)
                         .expect("object key does not match user prefix");
@@ -131,32 +144,42 @@ impl FileServer {
     pub async fn remove_file(&self, username: &str, filename: &str) -> Result<(), FileServerError> {
         let key = build_object_key(username, filename);
 
-        let delete_req = DeleteObjectRequest {
-            bucket: self.bucket.clone(),
-            key: key.to_string(),
-            ..Default::default()
-        };
+        self.client
+            .delete_object()
+            .bucket(&self.bucket)
+            .key(&key)
+            .send()
+            .await?;
 
-        self.client.delete_object(delete_req).await?;
         Ok(())
     }
 
-    fn get_presigned_retrieve_url(&self, key: String) -> String {
-        GetObjectRequest {
-            bucket: self.bucket.clone(),
-            key,
-            ..Default::default()
-        }
-        .get_presigned_url(
-            &self.region,
-            &self.credentials,
-            &PreSignedRequestOption {
-                expires_in: self.presigned_url_timeout,
-            },
-        )
+    async fn get_presigned_retrieve_url_as_string(
+        &self,
+        key: &str,
+    ) -> Result<String, FileServerError> {
+        let presigned_request = self.get_presigned_retrieve_url_as_req(key).await?;
+
+        Ok(format!("{}", presigned_request.uri()))
     }
 
-    pub fn get_post_policy_data(
+    async fn get_presigned_retrieve_url_as_req(
+        &self,
+        key: &str,
+    ) -> Result<PresignedRequest, FileServerError> {
+        let conf = PresigningConfig::expires_in(self.presigned_url_timeout)
+            .or(Err(FileServerError::CannotSignRequest))?;
+
+        self.client
+            .get_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .presigned(conf)
+            .await
+            .or(Err(FileServerError::CannotSignRequest))
+    }
+
+    pub async fn get_post_policy_data(
         &self,
         username: &str,
         filename: &str,
@@ -169,18 +192,28 @@ impl FileServer {
         let expiration_date = Utc::now()
             .add(chrono::Duration::from_std(self.presigned_url_timeout).expect("time overflow"));
 
-        let (upload_url, form_data) = PostPolicy::default()
+        let form_data = PostPolicy::default()
             .set_bucket_name(&self.bucket)
             .set_region(&self.region)
-            .set_access_key_id(self.credentials.aws_access_key_id())
-            .set_secret_access_key(self.credentials.aws_secret_access_key())
+            .set_access_key_id(self.credentials.access_key_id())
+            .set_secret_access_key(self.credentials.secret_access_key())
             .set_key(&key)
             .set_content_length_range(bytes_range_min, bytes_range_max)
             .set_expiration(&expiration_date)
             .build_form_data()
             .map_err(FileServerError::PolicyDataError)?;
 
-        let retrieve_url = self.get_presigned_retrieve_url(key);
+        let retrieve_url_as_req = self.get_presigned_retrieve_url_as_req(&key).await?;
+        let retrieve_url_as_uri = retrieve_url_as_req.uri();
+        let retrieve_url = format!("{}", retrieve_url_as_uri);
+
+        let upload_url = format!(
+            "https://{}.{}",
+            &self.bucket,
+            retrieve_url_as_uri
+                .host()
+                .expect("signed uri does not have hostname")
+        );
 
         Ok((upload_url, retrieve_url, form_data))
     }
