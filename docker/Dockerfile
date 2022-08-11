@@ -1,5 +1,9 @@
 FROM ubuntu:latest
 
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && update-ca-certificates
+
 RUN groupadd -r svanill && useradd --no-log-init -r -g svanill svanill
 
 COPY --chown=svanill:svanill svanill-vault-server /usr/local/bin/
