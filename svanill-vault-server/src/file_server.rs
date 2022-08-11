@@ -208,12 +208,16 @@ impl FileServer {
         let retrieve_url = format!("{}", retrieve_url_as_uri);
 
         let upload_url = format!(
-            "{}://{}.{}",
+            "{}://{}.{}{}",
             retrieve_url_as_uri.scheme_str().unwrap_or("https"),
             self.bucket,
             retrieve_url_as_uri
                 .host()
-                .expect("signed uri does not have hostname")
+                .expect("signed uri does not have hostname"),
+            retrieve_url_as_uri
+                .port()
+                .map(|x| format!(":{}", x))
+                .unwrap_or_default()
         );
 
         Ok((upload_url, retrieve_url, form_data))
