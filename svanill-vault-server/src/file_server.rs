@@ -6,13 +6,14 @@ use aws_sdk_s3::error::ListObjectsV2Error;
 use aws_sdk_s3::presigning::config::PresigningConfig;
 use aws_sdk_s3::presigning::request::PresignedRequest;
 use aws_smithy_client::SdkError;
+use aws_smithy_types::date_time::DateTime;
 use aws_smithy_types::{timeout, tristate::TriState};
 use aws_types::credentials::CredentialsError;
 use aws_types::region::Region;
-use chrono::Utc;
 use futures::future::try_join_all;
+use std::collections::HashMap;
 use std::default::Default;
-use std::{collections::HashMap, ops::Add};
+use std::time::SystemTime;
 use svanill_vault_openapi::RetrieveListOfUserFilesResponseContentItemContent;
 use thiserror::Error;
 
@@ -189,8 +190,11 @@ impl FileServer {
 
         let key = build_object_key(username, filename);
 
-        let expiration_date = Utc::now()
-            .add(chrono::Duration::from_std(self.presigned_url_timeout).expect("time overflow"));
+        let expiration_date = DateTime::from(
+            SystemTime::now()
+                .checked_add(self.presigned_url_timeout)
+                .expect("time overflow"),
+        );
 
         let form_data = PostPolicy::default()
             .set_bucket_name(&self.bucket)
