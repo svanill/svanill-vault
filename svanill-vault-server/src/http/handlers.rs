@@ -156,7 +156,8 @@ async fn request_upload_url(
         .into());
     };
 
-    let exts = req.extensions();
+    let exts = std::rc::Rc::new(req.extensions());
+    let exts = exts.clone();
     let username = &exts.get::<Username>().unwrap().0;
 
     let (upload_url, retrieve_url, form_data) = s3_fs
