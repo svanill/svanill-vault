@@ -201,7 +201,7 @@ dependencies = [
  "serde_urlencoded",
  "smallvec",
  "socket2",
- "time 0.3.13",
+ "time",
  "url",
 ]
 
@@ -280,15 +280,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "697ed7edc0f1711de49ce108c541623a0af97c6c60b2f6e2b65229847ac843c2"
 dependencies = [
  "alloc-no-stdlib",
-]
-
-[[package]]
-name = "android_system_properties"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7ed72e1635e121ca3e79420540282af22da58be50de153d36f81ddc6b83aa9e"
-dependencies = [
- "libc",
 ]
 
 [[package]]
@@ -412,7 +403,7 @@ dependencies = [
  "http",
  "hyper",
  "ring",
- "time 0.3.13",
+ "time",
  "tokio",
  "tower",
  "tracing",
@@ -575,7 +566,7 @@ dependencies = [
  "percent-encoding",
  "regex",
  "ring",
- "time 0.3.13",
+ "time",
  "tracing",
 ]
 
@@ -728,7 +719,7 @@ dependencies = [
  "itoa 1.0.1",
  "num-integer",
  "ryu",
- "time 0.3.13",
+ "time",
 ]
 
 [[package]]
@@ -883,21 +874,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "chrono"
-version = "0.4.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f725f340c3854e3cb3ab736dc21f0cca183303acea3b3ffec30f141503ac8eb"
-dependencies = [
- "iana-time-zone",
- "js-sys",
- "num-integer",
- "num-traits",
- "time 0.1.44",
- "wasm-bindgen",
- "winapi",
-]
-
-[[package]]
 name = "clap"
 version = "2.33.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -958,7 +934,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94d4706de1b0fa5b132270cddffa8585166037822e260a944fe161acd137ca05"
 dependencies = [
  "percent-encoding",
- "time 0.3.13",
+ "time",
  "version_check",
 ]
 
@@ -1503,19 +1479,6 @@ dependencies = [
  "tokio",
  "tokio-rustls 0.23.1",
  "webpki-roots",
-]
-
-[[package]]
-name = "iana-time-zone"
-version = "0.1.41"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1779539f58004e5dba1c1f093d44325ebeb244bfc04b791acdc0aaeca9c04570"
-dependencies = [
- "android_system_properties",
- "core-foundation",
- "js-sys",
- "wasm-bindgen",
- "winapi",
 ]
 
 [[package]]
@@ -2483,7 +2446,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "time 0.3.13",
+ "time",
  "url",
  "uuid",
 ]
@@ -2678,7 +2641,6 @@ dependencies = [
  "aws-smithy-types",
  "aws-types",
  "base64",
- "chrono",
  "color-backtrace",
  "ctor",
  "diesel",
@@ -2704,7 +2666,6 @@ dependencies = [
  "structopt",
  "svanill-vault-openapi",
  "thiserror",
- "time 0.3.13",
  "tokio",
 ]
 
@@ -2761,17 +2722,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "time"
-version = "0.1.44"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6db9e6914ab8b1ae1c260a4ae7a49b6c5611b40328a735b21862567685e73255"
-dependencies = [
- "libc",
- "wasi",
- "winapi",
 ]
 
 [[package]]

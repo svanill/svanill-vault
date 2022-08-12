@@ -1,15 +1,15 @@
 use aws_sigv4::sign::{calculate_signature, generate_signing_key};
+use aws_smithy_types::date_time::{DateTime, Format};
 use aws_types::region::Region;
-use chrono::{DateTime, Utc};
 use serde::ser::{Serialize, SerializeSeq, Serializer};
-use std::collections::HashMap;
+use std::{collections::HashMap, time::SystemTime};
 
 // Policy explanation:
 // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html
 
 #[derive(Default)]
 pub struct PostPolicy<'a> {
-    expiration: Option<&'a DateTime<Utc>>,
+    expiration: Option<&'a DateTime>,
     content_length_range: Option<(u64, u64)>,
     conditions: Vec<Condition<'a>>,
     form_data: HashMap<String, String>,
@@ -55,7 +55,7 @@ impl<'a> Serialize for Condition<'a> {
 
 impl<'a> PostPolicy<'a> {
     /// Set expiration time
-    pub fn set_expiration(mut self, t: &'a DateTime<Utc>) -> Self {
+    pub fn set_expiration(mut self, t: &'a DateTime) -> Self {
         self.expiration = Some(t);
         self
     }
@@ -185,17 +185,21 @@ impl<'a> PostPolicy<'a> {
         let expiration = self
             .expiration
             .unwrap()
-            .format("%Y-%m-%dT%H:%M:%S.000Z")
-            .to_string();
+            .fmt(Format::DateTime)
+            .or(Err("Cannot format expiration date"))?;
 
         let current_time = if cfg!(test) {
-            use chrono::TimeZone;
-            Utc.ymd(2020, 1, 1).and_hms(0, 0, 0)
+            DateTime::from_str("2020-01-01T00:00:00Z", Format::DateTime).unwrap()
         } else {
-            Utc::now()
+            DateTime::from(SystemTime::now())
         };
-        let current_time_fmted = current_time.format("%Y%m%dT%H%M%SZ").to_string();
-        let current_date = current_time.format("%Y%m%d").to_string();
+
+        let current_time_fmted = current_time
+            .fmt(Format::DateTime)
+            .or(Err("Cannot format current time"))?
+            .replace('-', "")
+            .replace(':', "");
+        let current_date = &current_time_fmted[0..8];
 
         let access_key_id = self.access_key_id.unwrap();
         let region = self.region.unwrap();
@@ -260,7 +264,6 @@ impl<'a> PostPolicy<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::prelude::*;
 
     const BUCKET: &str = "the-bucket";
     const REGION: Region = Region::from_static("eu-central-1");
@@ -270,7 +273,7 @@ mod tests {
 
     #[test]
     fn bucket_name_is_required() {
-        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+        let expiration_date = DateTime::from_str("2020-01-01T01:02:03Z", Format::DateTime).unwrap();
 
         let res = PostPolicy::default()
             .set_region(&REGION)
@@ -285,7 +288,7 @@ mod tests {
 
     #[test]
     fn region_is_required() {
-        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+        let expiration_date = DateTime::from_str("2020-01-01T01:02:03Z", Format::DateTime).unwrap();
 
         let res = PostPolicy::default()
             .set_bucket_name(BUCKET)
@@ -299,7 +302,7 @@ mod tests {
     }
     #[test]
     fn access_key_id_is_required() {
-        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+        let expiration_date = DateTime::from_str("2020-01-01T01:02:03Z", Format::DateTime).unwrap();
 
         let res = PostPolicy::default()
             .set_bucket_name(BUCKET)
@@ -314,7 +317,7 @@ mod tests {
 
     #[test]
     fn secret_access_key_is_required() {
-        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+        let expiration_date = DateTime::from_str("2020-01-01T01:02:03Z", Format::DateTime).unwrap();
 
         let res = PostPolicy::default()
             .set_bucket_name(BUCKET)
@@ -340,7 +343,7 @@ mod tests {
     }
     #[test]
     fn build_successfully() {
-        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+        let expiration_date = DateTime::from_str("2020-01-01T01:02:03Z", Format::DateTime).unwrap();
 
         let res = PostPolicy::default()
             .set_bucket_name(BUCKET)
@@ -369,7 +372,7 @@ mod tests {
         assert_eq!(form_data.get("x-amz-date").unwrap(), "20200101T000000Z");
 
         let expected_policy = serde_json::json!({
-            "expiration": "2020-01-01T01:02:03.000Z",
+            "expiration": "2020-01-01T01:02:03Z",
             "conditions": [
                 ["eq", "$bucket", "the-bucket"],
                 ["eq", "$key", "the-object-key"],
@@ -388,7 +391,7 @@ mod tests {
 
     #[test]
     fn set_content_type() {
-        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+        let expiration_date = DateTime::from_str("2020-01-01T01:02:03Z", Format::DateTime).unwrap();
 
         let res = PostPolicy::default()
             .set_content_type("some/type")
@@ -415,7 +418,7 @@ mod tests {
 
     #[test]
     fn append_policy() {
-        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+        let expiration_date = DateTime::from_str("2020-01-01T01:02:03Z", Format::DateTime).unwrap();
 
         let res = PostPolicy::default()
             .append_policy("a", "b", "c")
@@ -440,7 +443,7 @@ mod tests {
 
     #[test]
     fn set_key_startswith() {
-        let expiration_date = Utc.ymd(2020, 1, 1).and_hms(1, 2, 3);
+        let expiration_date = DateTime::from_str("2020-01-01T01:02:03Z", Format::DateTime).unwrap();
 
         let res = PostPolicy::default()
             .set_key_startswith("foo")
