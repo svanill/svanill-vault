@@ -6,7 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2022-08-12
 ### Migrate from rusoto to aws-sdk-rust
+### Update various dependencies
+
+## [0.5.0] - 2022-03-23
+### Update Sentry
+### Update rust edition to 2021
 
 ## [0.4.2] - 2022-03-09
 ### Update to actix-web 4 stable
