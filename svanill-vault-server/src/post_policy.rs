@@ -26,6 +26,26 @@ pub struct SerializablePolicy<'a> {
     conditions: &'a Vec<Condition<'a>>,
 }
 
+/// Formats a `DateTime` in `YYYYMMDD'T'HHMMSS'Z'` format.
+fn format_date_time(time: DateTime) -> Result<String, String> {
+    // this is dumb, but I don't want to add a dependency for it
+    // and I can't use the private omonymous function from aws_sigv4
+
+    // e.g. 2019-12-16T23:48:18.52Z
+    let s_full = time.fmt(Format::DateTime).or(Err("Cannot format time"))?;
+    let s = s_full.as_str();
+
+    Ok(format!(
+        "{}{}{}T{}{}{}Z",
+        &s[0..4],
+        &s[5..7],
+        &s[8..10],
+        &s[11..13],
+        &s[14..16],
+        &s[17..19]
+    ))
+}
+
 struct Condition<'a>((&'a str, &'a str, &'a str));
 
 impl<'a> Serialize for Condition<'a> {
@@ -189,16 +209,12 @@ impl<'a> PostPolicy<'a> {
             .or(Err("Cannot format expiration date"))?;
 
         let current_time = if cfg!(test) {
-            DateTime::from_str("2020-01-01T00:00:00Z", Format::DateTime).unwrap()
+            DateTime::from_str("2020-01-01T00:00:00.13Z", Format::DateTime).unwrap()
         } else {
             DateTime::from(SystemTime::now())
         };
 
-        let current_time_fmted = current_time
-            .fmt(Format::DateTime)
-            .or(Err("Cannot format current time"))?
-            .replace('-', "")
-            .replace(':', "");
+        let current_time_fmted = format_date_time(current_time)?;
         let current_date = &current_time_fmted[0..8];
 
         let access_key_id = self.access_key_id.unwrap();
