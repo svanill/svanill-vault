@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2022-08-13
+### x-amz-date does not containing anymore subseconds
+
 ## [0.6.0] - 2022-08-12
 ### Migrate from rusoto to aws-sdk-rust
 ### Update various dependencies
