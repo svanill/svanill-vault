@@ -42,7 +42,7 @@ aws-config = "0.47.0"
 aws-sigv4 = "0.48.0"
 aws-types = "0.47.0"
 aws-sdk-s3 = "0.17.0"
-aws-smithy-client = "0.47.0"
+aws-smithy-client = "0.48.0"
 aws-smithy-types = "0.47.0"
 http = "0.2.8"
 
@@ -52,7 +52,7 @@ default-features = false
 features = ["rustls", "backtrace", "contexts", "panic", "reqwest", "tracing"]
 
 [dev-dependencies]
-aws-smithy-client = { version = "0.47.0", features = ["test-util"] }
+aws-smithy-client = { version = "0.48.0", features = ["test-util"] }
 aws-smithy-http = "0.47.0"
 aws-sdk-iam = "0.18.0"
 tokio = "1.13.1"
