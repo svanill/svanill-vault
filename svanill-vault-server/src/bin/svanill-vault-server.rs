@@ -1,7 +1,8 @@
 use anyhow::Result;
 use aws_config::meta::region::RegionProviderChain;
-use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
+use diesel::SqliteConnection;
+use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
 use ring::{hmac, rand};
 use std::env;
 use std::fmt::Write as _;
@@ -14,6 +15,8 @@ use svanill_vault_server::server::{run, AppData};
 
 #[macro_use]
 extern crate diesel_migrations;
+
+const DB_MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -198,10 +201,10 @@ async fn main() -> Result<()> {
         .build(manager)
         .expect("Failed to create database connection pool");
 
-    embed_migrations!();
-    let connection = pool.get().expect("couldn't get db connection from pool");
+    let mut conn = pool.get().expect("couldn't get db connection from pool");
 
-    embedded_migrations::run(&connection).expect("failed to run migrations");
+    conn.run_pending_migrations(DB_MIGRATIONS)
+        .expect("failed to run migrations");
 
     // generate server key, used to sign and verify tokens
     let rng = rand::SystemRandom::new();

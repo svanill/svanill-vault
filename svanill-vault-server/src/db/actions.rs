@@ -3,7 +3,7 @@ use crate::errors::VaultError;
 use diesel::prelude::*;
 
 pub fn find_user_by_username(
-    conn: &SqliteConnection,
+    conn: &mut SqliteConnection,
     username: &str,
 ) -> Result<Option<User>, VaultError> {
     use crate::db::schema::user;

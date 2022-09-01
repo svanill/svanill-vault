@@ -17,7 +17,8 @@ actix-web-httpauth = "0.8.0"
 env_logger = "0.9.0"
 structopt = "0.3.26"
 diesel = { version = "2.0.0", features = ["sqlite", "r2d2"] }
-libsqlite3-sys = { version = "0.18.0", features = ["bundled"] }
+diesel_migrations = "2.0.0"
+libsqlite3-sys = { version = "0.25.1", features = ["bundled"] }
 serde = "1.0.144"
 serde_json = "1.0.85"
 serde_derive = "1.0.130"
@@ -32,7 +33,6 @@ base64 = "0.13.0"
 hmac = "0.12.1"
 sha2 = "0.10.3"
 color-backtrace = "0.5.1"
-diesel_migrations = "1.4.0"
 reqwest = { version = "0.11.9", default-features = false, features = ["blocking", "gzip", "multipart", "json", "rustls-tls", "rustls-tls-webpki-roots"] }
 hyper = { version = "0.14.20", features = ["full"] }
 hyper-rustls = { version = "0.23.0", features = ["webpki-roots", "http2"] }
