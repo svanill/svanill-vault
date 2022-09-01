@@ -11,6 +11,7 @@ use diesel::{
     r2d2::{self, ConnectionManager},
     RunQueryDsl, SqliteConnection,
 };
+use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
 use r2d2::Pool;
 use ring::hmac;
 use ring::test::rand::FixedByteRandom;
@@ -27,7 +28,8 @@ use svanill_vault_server::{file_server, server::AppData};
 
 #[macro_use]
 extern crate diesel_migrations;
-embed_migrations!();
+
+const DB_MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 #[cfg(test)]
 #[ctor]
@@ -279,16 +281,17 @@ fn setup_test_db() -> Pool<ConnectionManager<SqliteConnection>> {
         .build(manager)
         .expect("Failed to create database connection pool");
 
-    let connection = pool.get().expect("couldn't get db connection from pool");
+    let mut conn = pool.get().expect("couldn't get db connection from pool");
 
-    embedded_migrations::run(&connection).expect("failed to run migrations");
+    conn.run_pending_migrations(DB_MIGRATIONS)
+        .expect("failed to run migrations");
     pool
 }
 
 fn setup_test_db_with_user() -> Pool<ConnectionManager<SqliteConnection>> {
     let pool = setup_test_db();
 
-    let connection = pool.get().expect("couldn't get db connection from pool");
+    let mut conn = pool.get().expect("couldn't get db connection from pool");
 
     let query = diesel::sql_query(
         r#"
@@ -299,7 +302,7 @@ fn setup_test_db_with_user() -> Pool<ConnectionManager<SqliteConnection>> {
     );
 
     query
-        .execute(&connection)
+        .execute(&mut conn)
         .expect("failed to insert db test values");
 
     pool

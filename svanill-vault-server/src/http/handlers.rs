@@ -59,7 +59,7 @@ async fn auth_user_request_challenge(
     pool: web::Data<DbPool>,
     q: web::Query<AuthRequestChallengeQueryFields>,
 ) -> Result<HttpResponse, Error> {
-    let conn = pool.get().expect("couldn't get db connection from pool");
+    let mut conn = pool.get().expect("couldn't get db connection from pool");
 
     if q.username.is_none() {
         return Err(VaultError::FieldRequired {
@@ -68,9 +68,10 @@ async fn auth_user_request_challenge(
         .into());
     };
 
-    let maybe_user =
-        web::block(move || db::actions::find_user_by_username(&conn, q.username.as_ref().unwrap()))
-            .await?;
+    let maybe_user = web::block(move || {
+        db::actions::find_user_by_username(&mut conn, q.username.as_ref().unwrap())
+    })
+    .await?;
 
     if let Ok(Some(user)) = maybe_user {
         Ok(HttpResponse::Ok().json(
@@ -98,11 +99,12 @@ async fn auth_user_answer_challenge(
     crypto_key: web::Data<std::sync::Arc<ring::hmac::Key>>,
     tokens_cache: web::Data<Arc<RwLock<TokensCache>>>,
 ) -> Result<HttpResponse, Error> {
-    let conn = pool.get().expect("couldn't get db connection from pool");
+    let mut conn = pool.get().expect("couldn't get db connection from pool");
     let answer = payload.answer.clone();
 
     let maybe_user =
-        web::block(move || db::actions::find_user_by_username(&conn, &payload.username)).await?;
+        web::block(move || db::actions::find_user_by_username(&mut conn, &payload.username))
+            .await?;
 
     if let Ok(Some(user)) = maybe_user {
         let correct_answer = user.answer;
