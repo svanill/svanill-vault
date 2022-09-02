@@ -2528,7 +2528,7 @@ dependencies = [
 
 [[package]]
 name = "svanill-vault-server"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "actix-cors",
  "actix-http",
