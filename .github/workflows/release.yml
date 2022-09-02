@@ -51,6 +51,8 @@ jobs:
   dist:
     needs: verify-tests-and-formatting
     name: dist
+    permissions:
+      packages: write
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
