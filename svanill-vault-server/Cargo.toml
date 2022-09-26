@@ -22,7 +22,7 @@ libsqlite3-sys = { version = "0.25.1", features = ["bundled"] }
 serde = "1.0.145"
 serde_json = "1.0.85"
 serde_derive = "1.0.130"
-thiserror = "1.0.35"
+thiserror = "1.0.36"
 ring = "0.16.20"
 hex = "0.4.3"
 lru-cache = "0.1.2"
