@@ -140,7 +140,7 @@ fn main() -> Result<()> {
     let mut conf: Config = confy::load(cli_name)?;
     let mut conf_updated = false;
 
-    if opt.username != None {
+    if opt.username.is_some() {
         conf.username = opt.username.clone().unwrap();
         conf_updated = true;
     }
@@ -164,7 +164,7 @@ fn main() -> Result<()> {
 
     let challenge = request_challenge(&conf)?;
 
-    if opt.answer == None && conf.challenges.get(&challenge) == None {
+    if opt.answer.is_none() && conf.challenges.get(&challenge).is_none() {
         eprintln!("Cannot authenticate, missing answer to the server's challenge.");
         eprintln!("Decrypt the challenge to get the answer:");
         eprintln!("  svanill -i <(echo {}) dec", challenge);
