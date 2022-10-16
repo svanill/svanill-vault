@@ -6,7 +6,7 @@ use serde_json::json;
 fn it_output_version() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
 
-    let assert = cmd.args(&["-V"]).assert();
+    let assert = cmd.args(["-V"]).assert();
 
     assert.success().stdout("svanill-vault-cli 0.1.0\n");
 }
@@ -35,9 +35,7 @@ fn it_exit_with_error_if_the_user_does_not_exist() {
         .create();
 
     let base_url = &mockito::server_url();
-    let assert = cmd
-        .args(&["-u", "test_user", "-h", base_url, "ls"])
-        .assert();
+    let assert = cmd.args(["-u", "test_user", "-h", base_url, "ls"]).assert();
 
     m.assert();
     assert
@@ -59,7 +57,7 @@ fn it_list_remote_files() {
     let m3 = mock_list_files_happy_path(base_url, username);
 
     let assert = cmd
-        .args(&[
+        .args([
             "-h",
             base_url,
             "-u",
@@ -95,7 +93,7 @@ fn it_delete_files() {
         .create();
 
     let assert = cmd
-        .args(&[
+        .args([
             "-h",
             base_url,
             "-u",
@@ -132,7 +130,7 @@ fn it_pull_remote_file_output_to_stdout() {
         .create();
 
     let assert = cmd
-        .args(&[
+        .args([
             "-h",
             base_url,
             "-u",
@@ -200,7 +198,7 @@ fn it_push_content_from_stdin_to_remote_file() {
         .create();
 
     let assert = cmd
-        .args(&[
+        .args([
             "-h",
             base_url,
             "-u",

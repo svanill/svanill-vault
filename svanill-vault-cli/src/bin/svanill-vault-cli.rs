@@ -233,7 +233,7 @@ fn main() -> Result<()> {
 
             match maybe_input_file {
                 Some(ref path) if path.exists() => {
-                    File::open(&path)
+                    File::open(path)
                         .with_context(|| format!("trying to read file {:?}", path))?
                         .read_to_end(&mut local_content)?;
                 }
