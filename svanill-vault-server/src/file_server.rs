@@ -169,7 +169,7 @@ impl FileServer {
         key: &str,
     ) -> Result<PresignedRequest, FileServerError> {
         let conf = PresigningConfig::expires_in(self.presigned_url_timeout)
-            .or(Err(FileServerError::CannotSignRequest))?;
+            .map_err(|_| FileServerError::CannotSignRequest)?;
 
         self.client
             .get_object()
@@ -177,7 +177,7 @@ impl FileServer {
             .key(key)
             .presigned(conf)
             .await
-            .or(Err(FileServerError::CannotSignRequest))
+            .map_err(|_| FileServerError::CannotSignRequest)
     }
 
     pub async fn get_post_policy_data(
