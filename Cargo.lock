@@ -680,7 +680,6 @@ dependencies = [
  "aws-smithy-async 0.48.0",
  "aws-smithy-http 0.48.0",
  "aws-smithy-http-tower 0.48.0",
- "aws-smithy-protocol-test",
  "aws-smithy-types 0.48.0",
  "bytes",
  "fastrand",
@@ -690,7 +689,6 @@ dependencies = [
  "hyper-rustls 0.22.1",
  "lazy_static",
  "pin-project-lite",
- "serde",
  "tokio",
  "tower",
  "tracing",
@@ -705,6 +703,7 @@ dependencies = [
  "aws-smithy-async 0.49.0",
  "aws-smithy-http 0.49.0",
  "aws-smithy-http-tower 0.49.0",
+ "aws-smithy-protocol-test",
  "aws-smithy-types 0.49.0",
  "bytes",
  "fastrand",
@@ -714,6 +713,7 @@ dependencies = [
  "hyper-rustls 0.22.1",
  "lazy_static",
  "pin-project-lite",
+ "serde",
  "tokio",
  "tower",
  "tracing",
@@ -814,9 +814,9 @@ dependencies = [
 
 [[package]]
 name = "aws-smithy-protocol-test"
-version = "0.48.0"
+version = "0.49.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a615c2f5d1df9a970e5221bd05fddf4a89d1cb6e1e8b2282b0bd9cb5c9b4e444"
+checksum = "93aabb2d9fe3b25d960be1c8ecc875ab4a647c31686b2ddd4359b017ddb17be5"
 dependencies = [
  "assert-json-diff 1.1.0",
  "http",
@@ -2723,7 +2723,7 @@ dependencies = [
  "aws-sdk-iam",
  "aws-sdk-s3",
  "aws-sigv4 0.49.0",
- "aws-smithy-client 0.48.0",
+ "aws-smithy-client 0.49.0",
  "aws-smithy-http 0.48.0",
  "aws-smithy-types 0.48.0",
  "aws-types 0.48.0",
