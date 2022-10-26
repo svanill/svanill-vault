@@ -5,7 +5,7 @@ use aws_sdk_s3::error::HeadObjectError;
 use aws_sdk_s3::error::ListObjectsV2Error;
 use aws_sdk_s3::presigning::config::PresigningConfig;
 use aws_sdk_s3::presigning::request::PresignedRequest;
-use aws_smithy_client::SdkError;
+use aws_sdk_s3::types::SdkError;
 use aws_smithy_types::date_time::DateTime;
 use aws_smithy_types::{timeout, tristate::TriState};
 use aws_types::credentials::CredentialsError;
