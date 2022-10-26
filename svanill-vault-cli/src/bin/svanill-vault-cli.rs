@@ -137,7 +137,7 @@ fn main() -> Result<()> {
     }
 
     let cli_name = "svanill-vault-cli";
-    let mut conf: Config = confy::load(cli_name)?;
+    let mut conf: Config = confy::load(cli_name, cli_name)?;
     let mut conf_updated = false;
 
     if opt.username.is_some() {
@@ -182,7 +182,7 @@ fn main() -> Result<()> {
     conf.token = answer_challenge(&conf, answer)?;
 
     if conf_updated && opt.store_conf {
-        confy::store(cli_name, &conf)?;
+        confy::store(cli_name, cli_name, &conf)?;
     }
 
     match opt.cmd {
