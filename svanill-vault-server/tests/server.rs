@@ -1,6 +1,5 @@
 use crate::file_server::FileServer;
 use actix_http::StatusCode;
-use aws_config::RetryConfig;
 use aws_sdk_s3::Client as S3Client;
 use aws_sdk_s3::{Credentials, Region};
 use aws_smithy_client::test_connection::TestConnection;
@@ -481,7 +480,6 @@ fn setup_s3_fs(s3_resp_mock_conn: TestConnection<SdkBody>) -> FileServer {
     let s3_config = aws_sdk_s3::Config::builder()
         .credentials_provider(credentials.clone())
         .region(region.clone())
-        .retry_config(RetryConfig::disabled())
         .build();
 
     let client = S3Client::from_conf_conn(s3_config, s3_resp_mock_conn);

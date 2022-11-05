@@ -7,7 +7,7 @@ use aws_sdk_s3::presigning::config::PresigningConfig;
 use aws_sdk_s3::presigning::request::PresignedRequest;
 use aws_sdk_s3::types::SdkError;
 use aws_smithy_types::date_time::DateTime;
-use aws_smithy_types::{timeout, tristate::TriState};
+use aws_smithy_types::timeout;
 use aws_types::credentials::CredentialsError;
 use aws_types::region::Region;
 use futures::future::try_join_all;
@@ -67,9 +67,9 @@ impl FileServer {
             .provide_credentials()
             .await?;
 
-        let api_timeouts = timeout::Api::new()
-            .with_call_attempt_timeout(TriState::Set(std::time::Duration::from_millis(200)));
-        let timeout_config = timeout::Config::new().with_api_timeouts(api_timeouts);
+        let timeout_config = timeout::TimeoutConfig::builder()
+            .operation_attempt_timeout(std::time::Duration::from_millis(200))
+            .build();
 
         let mut s3_config_builder =
             aws_sdk_s3::config::Builder::from(&shared_config).timeout_config(timeout_config);
