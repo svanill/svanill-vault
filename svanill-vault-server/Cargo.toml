@@ -55,7 +55,7 @@ features = ["rustls", "backtrace", "contexts", "panic", "reqwest", "tracing"]
 aws-smithy-client = { version = "0.51.0", features = ["test-util"] }
 aws-smithy-http = "0.51.0"
 aws-sdk-iam = "0.21.0"
-tokio = "1.22.0"
+tokio = "1.23.0"
 ctor = "0.1.26"
 actix-rt = "2.7.0"
 
