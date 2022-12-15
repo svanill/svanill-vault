@@ -2785,7 +2785,7 @@ dependencies = [
  "aws-config",
  "aws-sdk-iam",
  "aws-sdk-s3",
- "aws-sigv4 0.51.0",
+ "aws-sigv4 0.52.0",
  "aws-smithy-client 0.51.0",
  "aws-smithy-http 0.51.0",
  "aws-smithy-types 0.51.0",
