@@ -480,9 +480,10 @@ fn setup_s3_fs(s3_resp_mock_conn: TestConnection<SdkBody>) -> FileServer {
     let s3_config = aws_sdk_s3::Config::builder()
         .credentials_provider(credentials.clone())
         .region(region.clone())
+        .http_connector(s3_resp_mock_conn)
         .build();
 
-    let client = S3Client::from_conf_conn(s3_config, s3_resp_mock_conn);
+    let client = S3Client::from_conf(s3_config);
 
     FileServer {
         region,

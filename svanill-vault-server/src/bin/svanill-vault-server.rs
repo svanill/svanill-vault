@@ -171,15 +171,10 @@ async fn main() -> Result<()> {
     // When everything fails, default to `us-east-1`.
     let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
 
-    let maybe_endpoint = opt
-        .s3_endpoint
-        .as_ref()
-        .map(|endpoint| aws_sdk_s3::Endpoint::immutable(endpoint.parse::<http::Uri>().unwrap()));
-
     let s3_fs = file_server::FileServer::new(
         region_provider,
         opt.s3_bucket,
-        maybe_endpoint,
+        opt.s3_endpoint,
         std::time::Duration::from_secs(opt.presigned_url_duration_in_min as u64 * 60),
     )
     .await?;
