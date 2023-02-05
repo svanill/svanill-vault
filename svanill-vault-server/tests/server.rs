@@ -111,7 +111,7 @@ async fn spawn_app(data: AppData) -> String {
     let port = listener.local_addr().unwrap().port();
 
     let server = svanill_vault_server::server::run(listener, data).expect("Failed to bind address");
-    let _ = tokio::spawn(server);
+    tokio::spawn(server);
 
     // We return the application address to the caller!
     format!("http://127.0.0.1:{port}")
