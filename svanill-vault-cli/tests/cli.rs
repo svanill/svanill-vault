@@ -165,7 +165,7 @@ fn it_push_content_from_stdin_to_remote_file() {
         .with_body(json!({
             "links":{
                 "retrieve_url":{
-                    "href":format!("{}/some/imaginary/retrieve/url", base_url),
+                    "href":format!("{base_url}/some/imaginary/retrieve/url"),
                     "rel":"file"
                 },
                 "upload_url":{
@@ -178,7 +178,7 @@ fn it_push_content_from_stdin_to_remote_file() {
                         "x-amz-date":"20200629T014946Z",
                         "x-amz-signature":"50cf7a0fa5ec900de9a6d7b05f7ecdd8e3c082bb144b7604d71118852e386c2d"
                     },
-                    "href":format!("{}/some/imaginary/upload/url", base_url),
+                    "href":format!("{base_url}/some/imaginary/upload/url"),
                     "rel":"file"
                 }
             },
@@ -232,11 +232,11 @@ fn mock_successful_authentication_requests(base_url: &str) -> (mockito::Mock, mo
                 "links":
                     {
                         "answer_auth_challenge":{
-                            "href": format!("{}/auth/answer-challenge", base_url),
+                            "href": format!("{base_url}/auth/answer-challenge"),
                             "rel":"auth"
                         },
                         "create_user":{
-                            "href": format!("{}/users/", base_url),
+                            "href": format!("{base_url}/users/"),
                             "rel":"user"
                         }
                     },
@@ -254,11 +254,11 @@ fn mock_successful_authentication_requests(base_url: &str) -> (mockito::Mock, mo
                     "content":{"token":"a-secure-token"},
                     "links":{
                         "files_list":{
-                            "href":format!("{}/files/", base_url),
+                            "href":format!("{base_url}/files/"),
                             "rel":"file"
                         },
                         "request_upload_url":{
-                            "href":format!("{}/files/request-upload-url/", base_url),
+                            "href":format!("{base_url}/files/request-upload-url/"),
                             "rel":"file"
                         }
                     },
@@ -282,17 +282,17 @@ fn mock_list_files_happy_path(base_url: &str, username: &str) -> mockito::Mock {
                     {
                         "content":{
                             "checksum":"a9a1bdddeacc612db8b5c01a830af1c3",
-                            "filename": format!("users/{}/this-is-a-test-file", username),
+                            "filename": format!("users/{username}/this-is-a-test-file"),
                             "size":123,
-                            "url":format!("{}/imaginary/url/this-is-a-test-file", base_url),
+                            "url":format!("{base_url}/imaginary/url/this-is-a-test-file"),
                         },
                         "links":{
                             "delete":{
-                                "href":format!("{}/files/", base_url),
+                                "href":format!("{base_url}/files/"),
                                 "rel":"file"
                             },
                             "read":{
-                                "href":format!("{}/imaginary/url/this-is-a-test-file", base_url),
+                                "href":format!("{base_url}/imaginary/url/this-is-a-test-file"),
                                 "rel":"file"
                             }
                         }

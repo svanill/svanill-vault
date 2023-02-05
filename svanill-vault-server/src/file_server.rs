@@ -96,7 +96,7 @@ impl FileServer {
             .client
             .list_objects_v2()
             .bucket(&self.bucket)
-            .prefix(format!("users/{}/", username))
+            .prefix(format!("users/{username}/"))
             .send()
             .await
             .map_err(FileServerError::CannotRetrieveFilesList)?;
@@ -209,7 +209,7 @@ impl FileServer {
 
         let retrieve_url_as_req = self.get_presigned_retrieve_url_as_req(&key).await?;
         let retrieve_url_as_uri = retrieve_url_as_req.uri();
-        let retrieve_url = format!("{}", retrieve_url_as_uri);
+        let retrieve_url = format!("{retrieve_url_as_uri}");
 
         let upload_url = format!(
             "{}://{}.{}{}",
@@ -220,7 +220,7 @@ impl FileServer {
                 .expect("signed uri does not have hostname"),
             retrieve_url_as_uri
                 .port()
-                .map(|x| format!(":{}", x))
+                .map(|x| format!(":{x}"))
                 .unwrap_or_default()
         );
 
@@ -229,7 +229,7 @@ impl FileServer {
 }
 
 fn build_object_key(username: &str, filename: &str) -> String {
-    format!("users/{}/{}", username, filename)
+    format!("users/{username}/{filename}")
 }
 
 fn split_object_key<'a>(username: &str, key: &'a str) -> Option<(&'a str, &'a str)> {

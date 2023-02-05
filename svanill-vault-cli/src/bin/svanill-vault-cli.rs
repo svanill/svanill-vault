@@ -167,7 +167,7 @@ fn main() -> Result<()> {
     if opt.answer.is_none() && conf.challenges.get(&challenge).is_none() {
         eprintln!("Cannot authenticate, missing answer to the server's challenge.");
         eprintln!("Decrypt the challenge to get the answer:");
-        eprintln!("  svanill -i <(echo {}) dec", challenge);
+        eprintln!("  svanill -i <(echo {challenge}) dec");
         eprintln!();
         eprintln!("Then re-run svanill-vault-cli passing --username and --answer. They will be stored in a config file so you won't have to provide them again");
         std::process::exit(1);
@@ -191,7 +191,7 @@ fn main() -> Result<()> {
         }
         Command::Delete { remote_name } => {
             delete(&conf, &remote_name)?;
-            println!("Success: deleted file \"{}\"", remote_name);
+            println!("Success: deleted file \"{remote_name}\"");
         }
         Command::Pull {
             output_file,
@@ -217,7 +217,7 @@ fn main() -> Result<()> {
 
                 Box::new(
                     File::create(&path)
-                        .with_context(|| format!("cannot create file {:?}", path))?,
+                        .with_context(|| format!("cannot create file {path:?}"))?,
                 )
             };
 
@@ -234,7 +234,7 @@ fn main() -> Result<()> {
             match maybe_input_file {
                 Some(ref path) if path.exists() => {
                     File::open(path)
-                        .with_context(|| format!("trying to read file {:?}", path))?
+                        .with_context(|| format!("trying to read file {path:?}"))?
                         .read_to_end(&mut local_content)?;
                 }
                 None => {
@@ -267,8 +267,7 @@ fn main() -> Result<()> {
             )?;
 
             println!(
-                "Successfully pushed file, using as remote name \"{}\"",
-                remote_name
+                "Successfully pushed file, using as remote name \"{remote_name}\""
             );
         }
     };

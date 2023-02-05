@@ -94,7 +94,7 @@ impl From<&VaultError> for ApiError {
             VaultError::FieldRequired { field } => ApiError::new(
                 StatusCode::CONFLICT,
                 1002,
-                format!("This field is required: {}", field),
+                format!("This field is required: {field}"),
             ),
             VaultError::GenericBadRequest(msg) => {
                 ApiError::new(StatusCode::BAD_REQUEST, 1024, msg.to_owned())

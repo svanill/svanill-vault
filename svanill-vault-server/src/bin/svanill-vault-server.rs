@@ -97,8 +97,7 @@ fn setup_log(level: Option<log::Level>) {
         let mut rust_log = env::var("RUST_LOG").unwrap_or_default();
 
         write!(rust_log,
-            ",{level},aws_config={level},actix_cors={level},actix_rt={level},actix_http={level},actix_web={level},actix_server={level}",
-            level = level
+            ",{level},aws_config={level},actix_cors={level},actix_rt={level},actix_http={level},actix_web={level},actix_server={level}"
         ).unwrap();
 
         env::set_var("RUST_LOG", rust_log);

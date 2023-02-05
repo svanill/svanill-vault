@@ -169,8 +169,7 @@ impl<'a> PostPolicy<'a> {
         match self.content_length_range {
             Some((min_length, max_length)) if min_length > max_length => {
                 return Err(format!(
-                    "Min-length ({}) must be <= Max-length ({})",
-                    min_length, max_length
+                    "Min-length ({min_length}) must be <= Max-length ({max_length})"
                 ));
             }
             _ => (),
@@ -250,7 +249,7 @@ impl<'a> PostPolicy<'a> {
         };
 
         let policy_as_json =
-            serde_json::to_string(&policy_to_serialize).map_err(|e| format!("{:?}", e))?;
+            serde_json::to_string(&policy_to_serialize).map_err(|e| format!("{e:?}"))?;
 
         let policy_as_base64 = base64::encode(policy_as_json);
 
