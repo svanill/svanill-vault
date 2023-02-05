@@ -216,8 +216,7 @@ fn main() -> Result<()> {
                 };
 
                 Box::new(
-                    File::create(&path)
-                        .with_context(|| format!("cannot create file {path:?}"))?,
+                    File::create(&path).with_context(|| format!("cannot create file {path:?}"))?,
                 )
             };
 
@@ -266,9 +265,7 @@ fn main() -> Result<()> {
                 String::from_utf8(local_content)?,
             )?;
 
-            println!(
-                "Successfully pushed file, using as remote name \"{remote_name}\""
-            );
+            println!("Successfully pushed file, using as remote name \"{remote_name}\"");
         }
     };
 
