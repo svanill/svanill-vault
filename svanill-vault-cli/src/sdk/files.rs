@@ -21,7 +21,7 @@ pub fn request_upload_url(
     let request_body = RequestUploadUrlRequestBody::new(filename.to_owned());
 
     let res = client
-        .post(&url)
+        .post(url)
         .bearer_auth(&conf.token)
         .json(&request_body)
         .send()?;
@@ -68,7 +68,7 @@ pub fn upload(
 
     form = form.part("file", content_part);
 
-    let res = client.post(&url).multipart(form).send()?;
+    let res = client.post(url).multipart(form).send()?;
     let status = res.status();
 
     if status.is_success() {
@@ -109,7 +109,7 @@ pub fn delete(conf: &Config, filename: &str) -> Result<(), SdkError> {
     request_body.insert("filename", filename);
 
     let res = client
-        .delete(&url)
+        .delete(url)
         .bearer_auth(&conf.token)
         .query(&[("filename", filename)])
         .json(&request_body)

@@ -9,7 +9,7 @@ pub fn ls(
 ) -> Result<Vec<RetrieveListOfUserFilesResponseContentItemContent>, SdkError> {
     let client = reqwest::blocking::Client::new();
     let url = format!("{}/files/", conf.base_url);
-    let res = client.get(&url).bearer_auth(&conf.token).send()?;
+    let res = client.get(url).bearer_auth(&conf.token).send()?;
 
     let status = res.status();
     let content = res.text()?;

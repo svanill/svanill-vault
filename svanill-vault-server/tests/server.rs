@@ -114,7 +114,7 @@ async fn spawn_app(data: AppData) -> String {
     let _ = tokio::spawn(server);
 
     // We return the application address to the caller!
-    format!("http://127.0.0.1:{}", port)
+    format!("http://127.0.0.1:{port}")
 }
 
 #[actix_rt::test]
