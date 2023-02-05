@@ -51,7 +51,7 @@ impl FileServer {
     pub async fn new(
         region_provider: RegionProviderChain,
         bucket: String,
-        maybe_endpoint: Option<aws_sdk_s3::Endpoint>,
+        maybe_endpoint: Option<String>,
         presigned_url_timeout: std::time::Duration,
     ) -> Result<FileServer, FileServerError> {
         let shared_config = aws_config::from_env().region(region_provider).load().await;
@@ -75,7 +75,7 @@ impl FileServer {
             aws_sdk_s3::config::Builder::from(&shared_config).timeout_config(timeout_config);
 
         if let Some(endpoint) = maybe_endpoint {
-            s3_config_builder = s3_config_builder.endpoint_resolver(endpoint);
+            s3_config_builder = s3_config_builder.endpoint_url(endpoint);
         }
 
         let s3_config = s3_config_builder.build();
