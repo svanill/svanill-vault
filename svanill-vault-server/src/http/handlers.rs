@@ -273,7 +273,23 @@ fn hateoas_auth_user_answer_challenge(req: &HttpRequest) -> serde_json::Value {
 }
 
 fn hateoas_auth_user_request_challenge(req: &HttpRequest) -> serde_json::Value {
-    let url = req.url_for_static("auth_user_request_challenge").unwrap();
+    //let url = req.url_for_static("auth_user_request_challenge").unwrap();
+    let maybe_url = req.url_for_static("auth_user_request_challenge");
+    if maybe_url.is_err() {
+        // Try to collect extra information for a rare bug
+        sentry::capture_message(
+            format!(
+                "req.head() {:?} ### req.app_config() {:?}",
+                req.head(),
+                req.app_config()
+            )
+            .as_str(),
+            sentry::protocol::Level::Error,
+        );
+    }
+
+    let url = maybe_url.unwrap();
+
     json!({
         "href": url.as_str(),
         "rel": "auth"
