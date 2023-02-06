@@ -1,6 +1,7 @@
 use crate::post_policy::PostPolicy;
-use aws_config::meta::region::RegionProviderChain;
+use aws_config::SdkConfig;
 use aws_credential_types::provider::error::CredentialsError;
+use aws_sdk_s3::config::Config as S3Config;
 use aws_sdk_s3::error::DeleteObjectError;
 use aws_sdk_s3::error::HeadObjectError;
 use aws_sdk_s3::error::ListObjectsV2Error;
@@ -8,7 +9,6 @@ use aws_sdk_s3::presigning::config::PresigningConfig;
 use aws_sdk_s3::presigning::request::PresignedRequest;
 use aws_sdk_s3::types::SdkError;
 use aws_smithy_types::date_time::DateTime;
-use aws_smithy_types::timeout;
 use aws_types::region::Region;
 use futures::future::try_join_all;
 use std::collections::HashMap;
@@ -49,38 +49,24 @@ pub struct FileServer {
 
 impl FileServer {
     pub async fn new(
-        region_provider: RegionProviderChain,
+        aws_sdk_conf: SdkConfig,
+        aws_s3_conf: S3Config,
         bucket: String,
-        maybe_endpoint: Option<String>,
         presigned_url_timeout: std::time::Duration,
     ) -> Result<FileServer, FileServerError> {
-        let shared_config = aws_config::from_env().region(region_provider).load().await;
-        let region: Region = shared_config
+        let region: Region = aws_sdk_conf
             .region()
             .ok_or(FileServerError::RegionNotConfigured)?
             .clone();
 
-        let credentials = shared_config
+        let credentials = aws_sdk_conf
             .credentials_provider()
             .ok_or(FileServerError::MissingCredentialsProviderError)?
             .as_ref()
             .provide_credentials()
             .await?;
 
-        let timeout_config = timeout::TimeoutConfig::builder()
-            .operation_attempt_timeout(std::time::Duration::from_millis(200))
-            .build();
-
-        let mut s3_config_builder =
-            aws_sdk_s3::config::Builder::from(&shared_config).timeout_config(timeout_config);
-
-        if let Some(endpoint) = maybe_endpoint {
-            s3_config_builder = s3_config_builder.endpoint_url(endpoint);
-        }
-
-        let s3_config = s3_config_builder.build();
-
-        let client = aws_sdk_s3::Client::from_conf(s3_config);
+        let client = aws_sdk_s3::Client::from_conf(aws_s3_conf);
 
         Ok(FileServer {
             region,

@@ -1,5 +1,6 @@
 use anyhow::Result;
 use aws_config::meta::region::RegionProviderChain;
+use aws_smithy_types::timeout;
 use diesel::r2d2::{self, ConnectionManager};
 use diesel::SqliteConnection;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
@@ -171,10 +172,25 @@ async fn main() -> Result<()> {
     // When everything fails, default to `us-east-1`.
     let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
 
+    let aws_sdk_conf = aws_config::from_env().region(region_provider).load().await;
+
+    let timeout_config = timeout::TimeoutConfig::builder()
+        .operation_attempt_timeout(std::time::Duration::from_millis(200))
+        .build();
+
+    let mut s3_config_builder =
+        aws_sdk_s3::config::Builder::from(&aws_sdk_conf).timeout_config(timeout_config);
+
+    if let Some(endpoint) = opt.s3_endpoint {
+        s3_config_builder = s3_config_builder.endpoint_url(endpoint);
+    }
+
+    let aws_s3_conf = s3_config_builder.build();
+
     let s3_fs = file_server::FileServer::new(
-        region_provider,
+        aws_sdk_conf,
+        aws_s3_conf,
         opt.s3_bucket,
-        opt.s3_endpoint,
         std::time::Duration::from_secs(opt.presigned_url_duration_in_min as u64 * 60),
     )
     .await?;

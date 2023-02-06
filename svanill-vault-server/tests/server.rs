@@ -1,10 +1,9 @@
 use crate::file_server::FileServer;
 use actix_http::StatusCode;
-use aws_sdk_s3::Client as S3Client;
+use async_trait::async_trait;
 use aws_sdk_s3::{Credentials, Region};
 use aws_smithy_client::test_connection::TestConnection;
 use aws_smithy_http::body::SdkBody;
-
 use ctor::ctor;
 use diesel::{
     r2d2::{self, ConnectionManager},
@@ -47,8 +46,9 @@ fn setup_fake_random_key() -> hmac::Key {
     hmac::Key::generate(hmac::HMAC_SHA256, &rng).expect("Cannot generate cryptographyc key")
 }
 
+#[async_trait]
 pub trait AppDataBuilder {
-    fn new() -> Self;
+    async fn new() -> Self;
     #[must_use]
     fn tokens_cache(self, tokens_cache: TokensCache) -> Self;
     #[must_use]
@@ -61,12 +61,13 @@ pub trait AppDataBuilder {
     fn cors_origin(self, origin: String) -> Self;
 }
 
+#[async_trait]
 impl AppDataBuilder for AppData {
-    fn new() -> AppData {
+    async fn new() -> AppData {
         let tokens_cache = TokensCache::default();
         let crypto_key = setup_fake_random_key();
         let pool = setup_test_db();
-        let s3_fs = setup_s3_fs(TestConnection::<SdkBody>::new(Vec::new()));
+        let s3_fs = setup_s3_fs(TestConnection::<SdkBody>::new(Vec::new())).await;
         let cors_origin = String::from("https://example.com");
 
         AppData {
@@ -119,7 +120,7 @@ async fn spawn_app(data: AppData) -> String {
 
 #[actix_rt::test]
 async fn noauth_noroute_must_return_401() {
-    let address = spawn_app(AppData::new()).await;
+    let address = spawn_app(AppData::new().await).await;
     let client = reqwest::Client::new();
 
     let resp = client
@@ -142,7 +143,7 @@ async fn noauth_noroute_must_return_401() {
 async fn auth_noroute_noget_must_return_405() {
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user");
 
-    let address = spawn_app(AppData::new().tokens_cache(tokens_cache)).await;
+    let address = spawn_app(AppData::new().await.tokens_cache(tokens_cache)).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -166,7 +167,7 @@ async fn auth_noroute_noget_must_return_405() {
 async fn auth_noroute_get_must_return_404() {
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user");
 
-    let address = spawn_app(AppData::new().tokens_cache(tokens_cache)).await;
+    let address = spawn_app(AppData::new().await.tokens_cache(tokens_cache)).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -187,7 +188,7 @@ async fn auth_noroute_get_must_return_404() {
 
 #[actix_rt::test]
 async fn root() {
-    let address = spawn_app(AppData::new()).await;
+    let address = spawn_app(AppData::new().await).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -206,7 +207,7 @@ async fn root() {
 
 #[actix_rt::test]
 async fn cors_origin_not_allowed() {
-    let address = spawn_app(AppData::new()).await;
+    let address = spawn_app(AppData::new().await).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -225,7 +226,7 @@ async fn cors_origin_not_allowed() {
 
 #[actix_rt::test]
 async fn cors_origin_request_method_missing() {
-    let address = spawn_app(AppData::new()).await;
+    let address = spawn_app(AppData::new().await).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -241,7 +242,7 @@ async fn cors_origin_request_method_missing() {
 
 #[actix_rt::test]
 async fn cors_success() {
-    let address = spawn_app(AppData::new()).await;
+    let address = spawn_app(AppData::new().await).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -258,7 +259,7 @@ async fn cors_success() {
 
 #[actix_rt::test]
 async fn cors_any_origin_success() {
-    let address = spawn_app(AppData::new().cors_origin(String::from("*"))).await;
+    let address = spawn_app(AppData::new().await.cors_origin(String::from("*"))).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -309,7 +310,7 @@ fn setup_test_db_with_user() -> Pool<ConnectionManager<SqliteConnection>> {
 
 #[actix_rt::test]
 async fn get_auth_challenge_no_username_provided() {
-    let address = spawn_app(AppData::new()).await;
+    let address = spawn_app(AppData::new().await).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -329,7 +330,7 @@ async fn get_auth_challenge_no_username_provided() {
 
 #[actix_rt::test]
 async fn get_auth_challenge_username_not_found() {
-    let address = spawn_app(AppData::new()).await;
+    let address = spawn_app(AppData::new().await).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -353,7 +354,7 @@ async fn get_auth_challenge_username_not_found() {
 #[actix_rt::test]
 async fn get_auth_challenge_ok() {
     let pool = setup_test_db_with_user();
-    let address = spawn_app(AppData::new().pool(pool)).await;
+    let address = spawn_app(AppData::new().await.pool(pool)).await;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -377,7 +378,7 @@ async fn get_auth_challenge_ok() {
 #[actix_rt::test]
 async fn answer_auth_challenge_username_not_found() {
     let pool = setup_test_db_with_user();
-    let address = spawn_app(AppData::new().pool(pool)).await;
+    let address = spawn_app(AppData::new().await.pool(pool)).await;
 
     let payload = AnswerUserChallengeRequest {
         username: "notfound".to_owned(),
@@ -404,7 +405,7 @@ async fn answer_auth_challenge_username_not_found() {
 #[actix_rt::test]
 async fn answer_auth_challenge_wrong_answer() {
     let pool = setup_test_db_with_user();
-    let address = spawn_app(AppData::new().pool(pool)).await;
+    let address = spawn_app(AppData::new().await.pool(pool)).await;
 
     let payload = AnswerUserChallengeRequest {
         username: "test_user_2".to_owned(),
@@ -431,7 +432,7 @@ async fn answer_auth_challenge_wrong_answer() {
 #[actix_rt::test]
 async fn answer_auth_challenge_ok() {
     let pool = setup_test_db_with_user();
-    let address = spawn_app(AppData::new().pool(pool)).await;
+    let address = spawn_app(AppData::new().await.pool(pool)).await;
 
     let payload = AnswerUserChallengeRequest {
         username: "test_user_2".to_owned(),
@@ -471,27 +472,28 @@ async fn answer_auth_challenge_ok() {
     assert_ne!(json_resp.content.token, json_resp2.content.token);
 }
 
-fn setup_s3_fs(s3_resp_mock_conn: TestConnection<SdkBody>) -> FileServer {
+async fn setup_s3_fs(s3_resp_mock_conn: TestConnection<SdkBody>) -> FileServer {
     let region = Region::new("eu-central-1");
     let bucket = "test_bucket".to_string();
-
     let credentials = Credentials::new("mock_key", "mock_secret", None, None, "mock_provider");
 
-    let s3_config = aws_sdk_s3::Config::builder()
-        .credentials_provider(credentials.clone())
+    let aws_sdk_conf = aws_config::from_env()
         .region(region.clone())
+        .credentials_provider(credentials.clone())
+        .load()
+        .await;
+
+    let aws_s3_conf = aws_sdk_s3::Config::builder()
+        .credentials_provider(credentials)
+        .region(region)
         .http_connector(s3_resp_mock_conn)
         .build();
 
-    let client = S3Client::from_conf(s3_config);
+    let presigned_url_timeout = std::time::Duration::from_secs(10);
 
-    FileServer {
-        region,
-        bucket,
-        client,
-        credentials,
-        presigned_url_timeout: std::time::Duration::from_secs(10),
-    }
+    FileServer::new(aws_sdk_conf, aws_s3_conf, bucket, presigned_url_timeout)
+        .await
+        .unwrap()
 }
 
 #[actix_rt::test]
@@ -499,7 +501,7 @@ async fn request_upload_url_ok() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let address = spawn_app(AppData::new().pool(pool).tokens_cache(tokens_cache)).await;
+    let address = spawn_app(AppData::new().await.pool(pool).tokens_cache(tokens_cache)).await;
 
     let payload = RequestUploadUrlRequestBody {
         filename: "test_filename".to_owned(),
@@ -534,7 +536,7 @@ async fn request_upload_url_empty_filename() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let address = spawn_app(AppData::new().pool(pool).tokens_cache(tokens_cache)).await;
+    let address = spawn_app(AppData::new().await.pool(pool).tokens_cache(tokens_cache)).await;
 
     let payload = RequestUploadUrlRequestBody {
         filename: "".to_owned(),
@@ -563,7 +565,7 @@ async fn request_upload_url_wrong_payload() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let address = spawn_app(AppData::new().pool(pool).tokens_cache(tokens_cache)).await;
+    let address = spawn_app(AppData::new().await.pool(pool).tokens_cache(tokens_cache)).await;
 
     let payload = "not a proper payload";
 
@@ -632,9 +634,10 @@ async fn list_user_files_ok() {
 
     let address = spawn_app(
         AppData::new()
+            .await
             .pool(pool)
             .tokens_cache(tokens_cache)
-            .s3_fs(s3_fs),
+            .s3_fs(s3_fs.await),
     )
     .await;
 
@@ -697,9 +700,10 @@ async fn list_user_files_s3_error() {
 
     let address = spawn_app(
         AppData::new()
+            .await
             .pool(pool)
             .tokens_cache(tokens_cache)
-            .s3_fs(s3_fs),
+            .s3_fs(s3_fs.await),
     )
     .await;
 
@@ -743,9 +747,10 @@ async fn delete_files_s3_error() {
 
     let address = spawn_app(
         AppData::new()
+            .await
             .pool(pool)
             .tokens_cache(tokens_cache)
-            .s3_fs(s3_fs),
+            .s3_fs(s3_fs.await),
     )
     .await;
 
@@ -789,9 +794,10 @@ async fn delete_files_missing_filename() {
 
     let address = spawn_app(
         AppData::new()
+            .await
             .pool(pool)
             .tokens_cache(tokens_cache)
-            .s3_fs(s3_fs),
+            .s3_fs(s3_fs.await),
     )
     .await;
 
@@ -835,9 +841,10 @@ async fn delete_files_ok() {
 
     let address = spawn_app(
         AppData::new()
+            .await
             .pool(pool)
             .tokens_cache(tokens_cache)
-            .s3_fs(s3_fs),
+            .s3_fs(s3_fs.await),
     )
     .await;
 
