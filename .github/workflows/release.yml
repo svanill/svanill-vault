@@ -129,12 +129,12 @@ jobs:
       - name: Get server version from Cargo.toml
         id: server-version-by-cargo
         run: |
-          echo "::set-output name=version::$(cargo metadata --offline --no-deps --format-version=1 | jq --raw-output '.packages[] | select(.name == "svanill-vault-server").version')"
+          echo "version=$(cargo metadata --offline --no-deps --format-version=1 | jq --raw-output '.packages[] | select(.name == "svanill-vault-server").version')" >> $GITHUB_OUTPUT
 
       - name: Is a new release?
         id: is-new-version
         run: |
-          echo "::set-output name=result::$(test $(git tag --list svanill-vault-server-${{ steps.server-version-by-cargo.outputs.version }}) && echo "" || echo ${{ steps.server-version-by-cargo.outputs.version }})"
+          echo "result=$(test $(git tag --list svanill-vault-server-${{ steps.server-version-by-cargo.outputs.version }}) && echo "" || echo ${{ steps.server-version-by-cargo.outputs.version }})" >> $GITHUB_OUTPUT
 
       - name: Tag the docker image with the new version
         if: steps.is-new-version.outputs.result != ''
@@ -177,12 +177,12 @@ jobs:
       - name: Get version from Cargo.toml
         id: version-by-cargo
         run: |
-          echo "::set-output name=version::${{ matrix.crate }}-$(cargo metadata --offline --no-deps --format-version=1 | jq --raw-output '.packages[] | select(.name == "${{ matrix.crate }}").version')"
+          echo "version=${{ matrix.crate }}-$(cargo metadata --offline --no-deps --format-version=1 | jq --raw-output '.packages[] | select(.name == "${{ matrix.crate }}").version')" >> $GITHUB_OUTPUT
 
       - name: Is a new release?
         id: is-new-version
         run: |
-          echo "::set-output name=result::$(test $(git tag --list ${{ steps.version-by-cargo.outputs.version }}) && echo "" || echo ${{ steps.version-by-cargo.outputs.version }})"
+          echo "result=$(test $(git tag --list ${{ steps.version-by-cargo.outputs.version }}) && echo "" || echo ${{ steps.version-by-cargo.outputs.version }})" >> $GITHUB_OUTPUT
 
       - name: Push tag/create release point
         if: steps.is-new-version.outputs.result != ''
