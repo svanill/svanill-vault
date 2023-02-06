@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.3] - 2023-02-06
+### Update various dependencies
+### Slightly simplify tests
+### Send extra info to sentry when we fail to parse the host
+
 ## [0.6.2] - 2022-09-02
 ### Update aws-sdk to 0.4.8
 ### Update internal dependencies
