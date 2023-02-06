@@ -474,14 +474,7 @@ async fn answer_auth_challenge_ok() {
 
 async fn setup_s3_fs(s3_resp_mock_conn: TestConnection<SdkBody>) -> FileServer {
     let region = Region::new("eu-central-1");
-    let bucket = "test_bucket".to_string();
     let credentials = Credentials::new("mock_key", "mock_secret", None, None, "mock_provider");
-
-    let aws_sdk_conf = aws_config::from_env()
-        .region(region.clone())
-        .credentials_provider(credentials.clone())
-        .load()
-        .await;
 
     let aws_s3_conf = aws_sdk_s3::Config::builder()
         .credentials_provider(credentials)
@@ -489,9 +482,11 @@ async fn setup_s3_fs(s3_resp_mock_conn: TestConnection<SdkBody>) -> FileServer {
         .http_connector(s3_resp_mock_conn)
         .build();
 
+    let bucket = "test_bucket".to_string();
+
     let presigned_url_timeout = std::time::Duration::from_secs(10);
 
-    FileServer::new(aws_sdk_conf, aws_s3_conf, bucket, presigned_url_timeout)
+    FileServer::new(aws_s3_conf, bucket, presigned_url_timeout)
         .await
         .unwrap()
 }

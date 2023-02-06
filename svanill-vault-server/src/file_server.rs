@@ -1,5 +1,4 @@
 use crate::post_policy::PostPolicy;
-use aws_config::SdkConfig;
 use aws_credential_types::provider::error::CredentialsError;
 use aws_sdk_s3::config::Config as S3Config;
 use aws_sdk_s3::error::DeleteObjectError;
@@ -49,24 +48,28 @@ pub struct FileServer {
 
 impl FileServer {
     pub async fn new(
-        aws_sdk_conf: SdkConfig,
         aws_s3_conf: S3Config,
         bucket: String,
         presigned_url_timeout: std::time::Duration,
     ) -> Result<FileServer, FileServerError> {
-        let region: Region = aws_sdk_conf
+        let region = aws_s3_conf
             .region()
             .ok_or(FileServerError::RegionNotConfigured)?
-            .clone();
+            .to_owned();
 
-        let credentials = aws_sdk_conf
-            .credentials_provider()
-            .ok_or(FileServerError::MissingCredentialsProviderError)?
+        let credentials = aws_s3_conf
+            .credentials_cache()
             .as_ref()
-            .provide_credentials()
-            .await?;
+            .provide_cached_credentials()
+            .await
+            .or(Err(FileServerError::MissingCredentialsProviderError))?;
 
         let client = aws_sdk_s3::Client::from_conf(aws_s3_conf);
+        client
+            .conf()
+            .credentials_cache()
+            .as_ref()
+            .provide_cached_credentials();
 
         Ok(FileServer {
             region,

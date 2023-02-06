@@ -1,6 +1,7 @@
 use anyhow::Result;
 use aws_config::meta::region::RegionProviderChain;
 use aws_smithy_types::timeout;
+use aws_types::region::Region;
 use diesel::r2d2::{self, ConnectionManager};
 use diesel::SqliteConnection;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
@@ -170,9 +171,12 @@ async fn main() -> Result<()> {
     // profile file
     // EC2 IMDSv2
     // When everything fails, default to `us-east-1`.
-    let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
+    let region: Region = RegionProviderChain::default_provider()
+        .region()
+        .await
+        .unwrap_or(aws_sdk_s3::Region::from_static("us-east-1"));
 
-    let aws_sdk_conf = aws_config::from_env().region(region_provider).load().await;
+    let aws_sdk_conf = aws_config::from_env().region(region.clone()).load().await;
 
     let timeout_config = timeout::TimeoutConfig::builder()
         .operation_attempt_timeout(std::time::Duration::from_millis(200))
@@ -188,7 +192,6 @@ async fn main() -> Result<()> {
     let aws_s3_conf = s3_config_builder.build();
 
     let s3_fs = file_server::FileServer::new(
-        aws_sdk_conf,
         aws_s3_conf,
         opt.s3_bucket,
         std::time::Duration::from_secs(opt.presigned_url_duration_in_min as u64 * 60),
