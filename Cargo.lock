@@ -2758,7 +2758,7 @@ dependencies = [
  "aws-sigv4 0.55.1",
  "aws-smithy-client",
  "aws-smithy-http 0.54.4",
- "aws-smithy-types 0.54.4",
+ "aws-smithy-types 0.55.2",
  "aws-types",
  "base64 0.20.0",
  "color-backtrace",
