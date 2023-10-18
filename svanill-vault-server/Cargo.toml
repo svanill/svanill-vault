@@ -57,7 +57,7 @@ aws-smithy-client = { version = "0.54.4", features = ["test-util"] }
 aws-smithy-http = "0.54.1"
 aws-sdk-iam = "0.24.0"
 tokio = "1.26.0"
-ctor = "0.1.26"
+ctor = "0.2.5"
 actix-rt = "2.8.0"
 
 [profile.release]
