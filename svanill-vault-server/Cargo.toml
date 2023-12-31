@@ -38,13 +38,13 @@ hyper = { version = "0.14.27", features = ["full"] }
 hyper-rustls = { version = "0.24.0", features = ["webpki-roots", "http2"] }
 sentry-actix = "0.31.0"
 async-trait = "0.1.76"
-aws-config = "0.54.1"
-aws-credential-types = "0.54.1"
-aws-sigv4 = "0.55.3"
-aws-types = "0.54.1"
-aws-sdk-s3 = "0.24.0"
-aws-smithy-client = "0.54.4"
-aws-smithy-types = "0.54.4"
+aws-config = "0.55.3"
+aws-credential-types = "0.55.3"
+aws-sigv4 = "1.1.1"
+aws-types = "0.55.3"
+aws-sdk-s3 = "0.28.0"
+aws-smithy-client = "0.55.3"
+aws-smithy-types = "1.1.1"
 http = "0.2.9"
 
 [dependencies.sentry]
@@ -53,9 +53,9 @@ default-features = false
 features = ["rustls", "backtrace", "contexts", "panic", "reqwest", "tracing"]
 
 [dev-dependencies]
-aws-smithy-client = { version = "0.54.4", features = ["test-util"] }
-aws-smithy-http = "0.54.1"
-aws-sdk-iam = "0.24.0"
+aws-smithy-client = { version = "0.55.3", features = ["test-util"] }
+aws-smithy-http = "0.60.1"
+aws-sdk-iam = "0.28.0"
 tokio = "1.26.0"
 ctor = "0.2.6"
 actix-rt = "2.9.0"
