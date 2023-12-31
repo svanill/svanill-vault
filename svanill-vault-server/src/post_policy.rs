@@ -1,6 +1,7 @@
 use aws_sigv4::sign::{calculate_signature, generate_signing_key};
 use aws_smithy_types::date_time::{DateTime, Format};
 use aws_types::region::Region;
+use base64::{engine::general_purpose, Engine as _};
 use serde::ser::{Serialize, SerializeSeq, Serializer};
 use std::{collections::HashMap, time::SystemTime};
 
@@ -251,7 +252,7 @@ impl<'a> PostPolicy<'a> {
         let policy_as_json =
             serde_json::to_string(&policy_to_serialize).map_err(|e| format!("{e:?}"))?;
 
-        let policy_as_base64 = base64::encode(policy_as_json);
+        let policy_as_base64 = general_purpose::STANDARD.encode(policy_as_json);
 
         let signature_date = std::time::SystemTime::now();
 
@@ -399,7 +400,7 @@ mod tests {
         });
 
         let policy_as_base64 = form_data.get("policy").unwrap();
-        let policy_as_vec_u8 = base64::decode(policy_as_base64).unwrap();
+        let policy_as_vec_u8 = general_purpose::STANDARD.decode(policy_as_base64).unwrap();
         let policy: serde_json::Value = serde_json::from_slice(&policy_as_vec_u8).unwrap();
         assert_eq!(policy, expected_policy);
     }
@@ -425,7 +426,7 @@ mod tests {
         assert_eq!(form_data.get("Content-Type").unwrap(), "some/type");
 
         let policy_as_base64 = form_data.get("policy").unwrap();
-        let policy_as_vec_u8 = base64::decode(policy_as_base64).unwrap();
+        let policy_as_vec_u8 = general_purpose::STANDARD.decode(policy_as_base64).unwrap();
         let policy: serde_json::Value = serde_json::from_slice(&policy_as_vec_u8).unwrap();
         let conditions = policy["conditions"].as_array().unwrap();
         assert!(conditions.contains(&serde_json::json!(["eq", "$Content-Type", "some/type"])));
@@ -450,7 +451,7 @@ mod tests {
         assert_eq!(form_data.get("a"), None);
 
         let policy_as_base64 = form_data.get("policy").unwrap();
-        let policy_as_vec_u8 = base64::decode(policy_as_base64).unwrap();
+        let policy_as_vec_u8 = general_purpose::STANDARD.decode(policy_as_base64).unwrap();
         let policy: serde_json::Value = serde_json::from_slice(&policy_as_vec_u8).unwrap();
         let conditions = policy["conditions"].as_array().unwrap();
         assert!(conditions.contains(&serde_json::json!(["a", "b", "c"])));
@@ -474,7 +475,7 @@ mod tests {
         assert_eq!(form_data.get("key").unwrap(), "foo");
 
         let policy_as_base64 = form_data.get("policy").unwrap();
-        let policy_as_vec_u8 = base64::decode(policy_as_base64).unwrap();
+        let policy_as_vec_u8 = general_purpose::STANDARD.decode(policy_as_base64).unwrap();
         let policy: serde_json::Value = serde_json::from_slice(&policy_as_vec_u8).unwrap();
         let conditions = policy["conditions"].as_array().unwrap();
         assert!(conditions.contains(&serde_json::json!(["starts-with", "$key", "foo"])));
