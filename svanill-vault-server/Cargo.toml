@@ -36,26 +36,26 @@ color-backtrace = "0.6.1"
 reqwest = { version = "0.11.18", default-features = false, features = ["blocking", "gzip", "multipart", "json", "rustls-tls", "rustls-tls-webpki-roots"] }
 hyper = { version = "0.14.27", features = ["full"] }
 hyper-rustls = { version = "0.24.0", features = ["webpki-roots", "http2"] }
-sentry-actix = "0.31.0"
+sentry-actix = "0.32.1"
 async-trait = "0.1.76"
-aws-config = "0.55.3"
-aws-credential-types = "0.55.3"
+aws-config = "1.1.1"
+aws-credential-types = "1.1.1"
 aws-sigv4 = "1.1.1"
-aws-types = "0.55.3"
-aws-sdk-s3 = "0.28.0"
-aws-smithy-client = "0.55.3"
+aws-types = "1.1.1"
+aws-sdk-s3 = "1.11.0"
+aws-smithy-client = "0.60.1"
 aws-smithy-types = "1.1.1"
 http = "0.2.9"
 
 [dependencies.sentry]
-version = "0.31.4"
+version = "0.32.1"
 default-features = false
 features = ["rustls", "backtrace", "contexts", "panic", "reqwest", "tracing"]
 
 [dev-dependencies]
-aws-smithy-client = { version = "0.55.3", features = ["test-util"] }
 aws-smithy-http = "0.60.1"
-aws-sdk-iam = "0.28.0"
+aws-smithy-runtime = { version = "1.1.1", features=["client", "test-util"] }
+aws-sdk-iam = "1.9.1"
 tokio = "1.26.0"
 ctor = "0.2.6"
 actix-rt = "2.9.0"
