@@ -7,6 +7,13 @@ updates:
       day: 'thursday'
       time: '02:00'
     open-pull-requests-limit: 10
+    groups:
+      aws:
+        patterns: ["aws-*"]
+      serde:
+        patterns: ["serde", "serde*"]
+      actix:
+        patterns: ["actix*"]
 
   - package-ecosystem: 'github-actions'
     directory: '/'
