@@ -1,4 +1,4 @@
-use aws_sigv4::sign::{calculate_signature, generate_signing_key};
+use aws_sigv4::sign::v4::{calculate_signature, generate_signing_key};
 use aws_smithy_types::date_time::{DateTime, Format};
 use aws_types::region::Region;
 use base64::{engine::general_purpose, Engine as _};

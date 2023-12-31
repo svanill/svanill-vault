@@ -1,5 +1,7 @@
 use anyhow::Result;
 use aws_config::meta::region::RegionProviderChain;
+use aws_config::BehaviorVersion;
+use aws_credential_types::provider::SharedCredentialsProvider;
 use aws_smithy_types::timeout;
 use aws_types::region::Region;
 use diesel::r2d2::{self, ConnectionManager};
@@ -174,13 +176,24 @@ async fn main() -> Result<()> {
     let region: Region = RegionProviderChain::default_provider()
         .region()
         .await
-        .unwrap_or(aws_sdk_s3::Region::from_static("us-east-1"));
+        .unwrap_or(aws_sdk_s3::config::Region::from_static("us-east-1"));
 
-    let aws_sdk_conf = aws_config::from_env().region(region.clone()).load().await;
+    let aws_sdk_conf = aws_config::defaults(BehaviorVersion::v2023_11_09())
+        .region(region.clone())
+        .load()
+        .await;
 
     let timeout_config = timeout::TimeoutConfig::builder()
         .operation_attempt_timeout(std::time::Duration::from_millis(200))
         .build();
+
+    let credentials = aws_credential_types::Credentials::new(
+        std::env::var("AWS_ACCESS_KEY_ID").expect("AWS_ACCESS_KEY_ID env not found"),
+        std::env::var("AWS_SECRET_ACCESS_KEY").expect("AWS_SECRET_ACCESS_KEY env not found"),
+        None,
+        None,
+        "StaticCredentials",
+    );
 
     let mut s3_config_builder =
         aws_sdk_s3::config::Builder::from(&aws_sdk_conf).timeout_config(timeout_config);
@@ -189,10 +202,13 @@ async fn main() -> Result<()> {
         s3_config_builder = s3_config_builder.endpoint_url(endpoint);
     }
 
-    let aws_s3_conf = s3_config_builder.build();
+    let aws_s3_conf = s3_config_builder
+        .credentials_provider(SharedCredentialsProvider::new(credentials.clone()))
+        .build();
 
     let s3_fs = file_server::FileServer::new(
         aws_s3_conf,
+        credentials,
         opt.s3_bucket,
         std::time::Duration::from_secs(opt.presigned_url_duration_in_min as u64 * 60),
     )

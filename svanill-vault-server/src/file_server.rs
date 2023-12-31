@@ -1,12 +1,12 @@
 use crate::post_policy::PostPolicy;
 use aws_credential_types::provider::error::CredentialsError;
 use aws_sdk_s3::config::Config as S3Config;
-use aws_sdk_s3::error::DeleteObjectError;
-use aws_sdk_s3::error::HeadObjectError;
-use aws_sdk_s3::error::ListObjectsV2Error;
-use aws_sdk_s3::presigning::config::PresigningConfig;
-use aws_sdk_s3::presigning::request::PresignedRequest;
-use aws_sdk_s3::types::SdkError;
+use aws_sdk_s3::error::SdkError;
+use aws_sdk_s3::operation::delete_object::DeleteObjectError;
+use aws_sdk_s3::operation::head_object::HeadObjectError;
+use aws_sdk_s3::operation::list_objects_v2::ListObjectsV2Error;
+use aws_sdk_s3::presigning::PresignedRequest;
+use aws_sdk_s3::presigning::PresigningConfig;
 use aws_smithy_types::date_time::DateTime;
 use aws_types::region::Region;
 use futures::future::try_join_all;
@@ -42,13 +42,14 @@ pub struct FileServer {
     pub region: Region,
     pub bucket: String,
     pub client: aws_sdk_s3::Client,
-    pub credentials: aws_sdk_s3::Credentials,
+    pub credentials: aws_credential_types::Credentials,
     pub presigned_url_timeout: std::time::Duration,
 }
 
 impl FileServer {
     pub async fn new(
         aws_s3_conf: S3Config,
+        credentials: aws_credential_types::Credentials,
         bucket: String,
         presigned_url_timeout: std::time::Duration,
     ) -> Result<FileServer, FileServerError> {
@@ -57,19 +58,7 @@ impl FileServer {
             .ok_or(FileServerError::RegionNotConfigured)?
             .to_owned();
 
-        let credentials = aws_s3_conf
-            .credentials_cache()
-            .as_ref()
-            .provide_cached_credentials()
-            .await
-            .or(Err(FileServerError::MissingCredentialsProviderError))?;
-
         let client = aws_sdk_s3::Client::from_conf(aws_s3_conf);
-        client
-            .conf()
-            .credentials_cache()
-            .as_ref()
-            .provide_cached_credentials();
 
         Ok(FileServer {
             region,
@@ -95,10 +84,10 @@ impl FileServer {
                 .contents
                 .unwrap_or_default()
                 .into_iter()
-                .filter(|x| x.key.is_some())
+                .filter(|x| x.key.is_some() && x.size().is_some())
                 .map(|obj| async move {
                     let key = obj.key.unwrap(); // always ok, we filtered for Some(key) only
-                    let size = obj.size;
+                    let size = obj.size.unwrap(); // always ok, we filtered for Some(size) only
 
                     let etag = if let Some(etag) = obj.e_tag {
                         etag
@@ -113,7 +102,11 @@ impl FileServer {
                             .unwrap_or_default()
                     };
 
-                    let url = self.get_presigned_retrieve_url_as_string(&key).await?;
+                    let url = self
+                        .get_presigned_retrieve_url_as_req(&key)
+                        .await?
+                        .uri()
+                        .to_string();
 
                     let (_, filename) = split_object_key(username, &key)
                         .expect("object key does not match user prefix");
@@ -142,15 +135,6 @@ impl FileServer {
             .await?;
 
         Ok(())
-    }
-
-    async fn get_presigned_retrieve_url_as_string(
-        &self,
-        key: &str,
-    ) -> Result<String, FileServerError> {
-        let presigned_request = self.get_presigned_retrieve_url_as_req(key).await?;
-
-        Ok(format!("{}", presigned_request.uri()))
     }
 
     async fn get_presigned_retrieve_url_as_req(
@@ -197,23 +181,24 @@ impl FileServer {
             .map_err(FileServerError::PolicyDataError)?;
 
         let retrieve_url_as_req = self.get_presigned_retrieve_url_as_req(&key).await?;
-        let retrieve_url_as_uri = retrieve_url_as_req.uri();
-        let retrieve_url = format!("{retrieve_url_as_uri}");
+        let retrieve_url = retrieve_url_as_req.uri();
 
-        let upload_url = format!(
-            "{}://{}.{}{}",
-            retrieve_url_as_uri.scheme_str().unwrap_or("https"),
-            self.bucket,
-            retrieve_url_as_uri
-                .host()
-                .expect("signed uri does not have hostname"),
-            retrieve_url_as_uri
-                .port()
-                .map(|x| format!(":{x}"))
-                .unwrap_or_default()
-        );
+        // This is terrible, but it gets the job done in our and most configuration
+        // We need to prepend the service and stop at the domain.
+        // E.g. from
+        // https://s3.eu-central-1.amazonaws.com/some-bucketname/...&X-Amz-Algorithm...
+        // to https://some-bucketname.s3.eu-central-1.amazonaws.com
+        // Protocol could be http/https, domain could also be an ip with port, etc...
+        let v: Vec<&str> = retrieve_url.splitn(4, '/').collect();
 
-        Ok((upload_url, retrieve_url, form_data))
+        if let [protocol, _, domain, _] = &v[..] {
+            let upload_url = [protocol, "//", &self.bucket, ".", domain].join("");
+            Ok((upload_url, retrieve_url.to_owned(), form_data))
+        } else {
+            Err(FileServerError::PolicyDataError(
+                "Cannot parse s3 url".to_owned(),
+            ))
+        }
     }
 }
 
