@@ -1,9 +1,10 @@
 use crate::file_server::FileServer;
 use actix_http::StatusCode;
 use async_trait::async_trait;
-use aws_sdk_s3::{Credentials, Region};
-use aws_smithy_client::test_connection::TestConnection;
-use aws_smithy_http::body::SdkBody;
+use aws_config::Region;
+use aws_credential_types::Credentials;
+use aws_smithy_runtime::client::http::test_util::ReplayEvent;
+use aws_smithy_runtime::client::http::test_util::StaticReplayClient;
 use ctor::ctor;
 use diesel::{
     r2d2::{self, ConnectionManager},
@@ -67,7 +68,7 @@ impl AppDataBuilder for AppData {
         let tokens_cache = TokensCache::default();
         let crypto_key = setup_fake_random_key();
         let pool = setup_test_db();
-        let s3_fs = setup_s3_fs(TestConnection::<SdkBody>::new(Vec::new())).await;
+        let s3_fs = setup_s3_fs(StaticReplayClient::new(Vec::new())).await;
         let cors_origin = String::from("https://example.com");
 
         AppData {
@@ -472,21 +473,22 @@ async fn answer_auth_challenge_ok() {
     assert_ne!(json_resp.content.token, json_resp2.content.token);
 }
 
-async fn setup_s3_fs(s3_resp_mock_conn: TestConnection<SdkBody>) -> FileServer {
+async fn setup_s3_fs(s3_resp_mock_conn: StaticReplayClient) -> FileServer {
     let region = Region::new("eu-central-1");
     let credentials = Credentials::new("mock_key", "mock_secret", None, None, "mock_provider");
 
     let aws_s3_conf = aws_sdk_s3::Config::builder()
-        .credentials_provider(credentials)
+        .behavior_version_latest()
+        .credentials_provider(credentials.clone())
         .region(region)
-        .http_connector(s3_resp_mock_conn)
+        .http_client(s3_resp_mock_conn)
         .build();
 
     let bucket = "test_bucket".to_string();
 
     let presigned_url_timeout = std::time::Duration::from_secs(10);
 
-    FileServer::new(aws_s3_conf, bucket, presigned_url_timeout)
+    FileServer::new(aws_s3_conf, credentials, bucket, presigned_url_timeout)
         .await
         .unwrap()
 }
@@ -588,17 +590,17 @@ async fn list_user_files_ok() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let s3_conn_mock = TestConnection::new(vec![
+    let s3_conn_mock = StaticReplayClient::new(vec![
         // Events
-        (
+        ReplayEvent::new(
             // Request
             http::Request::builder()
-                .body(aws_smithy_http::body::SdkBody::from("some request"))
+                .body(aws_smithy_types::body::SdkBody::from("some request"))
                 .unwrap(),
             // Response
             http::Response::builder()
                 .status(200)
-                .body(aws_smithy_http::body::SdkBody::from(
+                .body(aws_smithy_types::body::SdkBody::from(
                     r#"<?xml version="1.0" encoding="UTF-8"?>
                     <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
                       <Name>quotes</Name>
@@ -677,17 +679,17 @@ async fn list_user_files_s3_error() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let s3_conn_mock = TestConnection::new(vec![
+    let s3_conn_mock = StaticReplayClient::new(vec![
         // Events
-        (
+        ReplayEvent::new(
             // Request
             http::Request::builder()
-                .body(aws_smithy_http::body::SdkBody::from("some request"))
+                .body(aws_smithy_types::body::SdkBody::from("some request"))
                 .unwrap(),
             // Response
             http::Response::builder()
                 .status(500)
-                .body(aws_smithy_http::body::SdkBody::from("gibberish"))
+                .body(aws_smithy_types::body::SdkBody::from("gibberish"))
                 .unwrap(),
         ),
     ]);
@@ -724,17 +726,17 @@ async fn delete_files_s3_error() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let s3_conn_mock = TestConnection::new(vec![
+    let s3_conn_mock = StaticReplayClient::new(vec![
         // Events
-        (
+        ReplayEvent::new(
             // Request
             http::Request::builder()
-                .body(aws_smithy_http::body::SdkBody::from("some request"))
+                .body(aws_smithy_types::body::SdkBody::from("some request"))
                 .unwrap(),
             // Response
             http::Response::builder()
                 .status(400) // this is what we are interested in
-                .body(aws_smithy_http::body::SdkBody::from("gibberish"))
+                .body(aws_smithy_types::body::SdkBody::from("gibberish"))
                 .unwrap(),
         ),
     ]);
@@ -771,17 +773,17 @@ async fn delete_files_missing_filename() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let s3_conn_mock = TestConnection::new(vec![
+    let s3_conn_mock = StaticReplayClient::new(vec![
         // Events
-        (
+        ReplayEvent::new(
             // Request
             http::Request::builder()
-                .body(aws_smithy_http::body::SdkBody::from("some request"))
+                .body(aws_smithy_types::body::SdkBody::from("some request"))
                 .unwrap(),
             // Response
             http::Response::builder()
                 .status(400) // this is what we are interested in
-                .body(aws_smithy_http::body::SdkBody::from("gibberish"))
+                .body(aws_smithy_types::body::SdkBody::from("gibberish"))
                 .unwrap(),
         ),
     ]);
@@ -818,17 +820,17 @@ async fn delete_files_ok() {
     let pool = setup_test_db_with_user();
     let tokens_cache = setup_tokens_cache("dummy-valid-token", "test_user_2");
 
-    let s3_conn_mock = TestConnection::new(vec![
+    let s3_conn_mock = StaticReplayClient::new(vec![
         // Events
-        (
+        ReplayEvent::new(
             // Request
             http::Request::builder()
-                .body(aws_smithy_http::body::SdkBody::from("some request"))
+                .body(aws_smithy_types::body::SdkBody::from("some request"))
                 .unwrap(),
             // Response
             http::Response::builder()
                 .status(StatusCode::NO_CONTENT) // this is what we are interested in
-                .body(aws_smithy_http::body::SdkBody::from("gibberish"))
+                .body(aws_smithy_types::body::SdkBody::from("gibberish"))
                 .unwrap(),
         ),
     ]);
