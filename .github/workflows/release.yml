@@ -81,7 +81,7 @@ jobs:
 
       - name: Upload artifacts (linux/macos)
         if: matrix.os != 'windows-latest'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.os }}
           path: |
@@ -90,7 +90,7 @@ jobs:
 
       - name: Upload artifacts (windows)
         if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.os }}
           path: |
