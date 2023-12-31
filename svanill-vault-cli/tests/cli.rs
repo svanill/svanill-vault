@@ -1,5 +1,5 @@
 use assert_cmd::Command;
-use mockito::{mock, Matcher};
+use mockito::Matcher;
 use serde_json::json;
 
 #[test]
@@ -15,7 +15,11 @@ fn it_output_version() {
 fn it_exit_with_error_if_the_user_does_not_exist() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
 
-    let m = mock("GET", "/auth/request-challenge?username=test_user")
+    let mut server = mockito::Server::new();
+    let base_url = &server.url();
+
+    let m = server
+        .mock("GET", "/auth/request-challenge?username=test_user")
         .with_status(401)
         .with_header("content-type", "application/json")
         .with_body(
@@ -34,7 +38,6 @@ fn it_exit_with_error_if_the_user_does_not_exist() {
         )
         .create();
 
-    let base_url = &mockito::server_url();
     let assert = cmd.args(["-u", "test_user", "-h", base_url, "ls"]).assert();
 
     m.assert();
@@ -50,11 +53,12 @@ fn it_list_remote_files() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
     let username = "test_user";
 
-    let base_url = &mockito::server_url();
+    let mut server = mockito::Server::new();
+    let base_url = &server.url();
 
-    let (m1, m2) = mock_successful_authentication_requests(base_url);
+    let (m1, m2) = mock_successful_authentication_requests(&mut server);
 
-    let m3 = mock_list_files_happy_path(base_url, username);
+    let m3 = mock_list_files_happy_path(&mut server, username);
 
     let assert = cmd
         .args([
@@ -82,11 +86,13 @@ fn it_list_remote_files() {
 fn it_delete_files() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
 
-    let base_url = &mockito::server_url();
+    let mut server = mockito::Server::new();
+    let base_url = &server.url();
 
-    let (m1, m2) = mock_successful_authentication_requests(base_url);
+    let (m1, m2) = mock_successful_authentication_requests(&mut server);
 
-    let m3 = mock("DELETE", "/files/?filename=some-file-to-delete")
+    let m3 = server
+        .mock("DELETE", "/files/?filename=some-file-to-delete")
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"status":200}"#)
@@ -118,12 +124,14 @@ fn it_pull_remote_file_output_to_stdout() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
     let username = "test_user";
 
-    let base_url = &mockito::server_url();
+    let mut server = mockito::Server::new();
+    let base_url = &server.url();
 
-    let (m1, m2) = mock_successful_authentication_requests(base_url);
-    let m3 = mock_list_files_happy_path(base_url, username);
+    let (m1, m2) = mock_successful_authentication_requests(&mut server);
+    let m3 = mock_list_files_happy_path(&mut server, username);
 
-    let m4 = mock("GET", "/imaginary/url/this-is-a-test-file")
+    let m4 = server
+        .mock("GET", "/imaginary/url/this-is-a-test-file")
         .with_status(200)
         .with_header("content-type", "text/plain")
         .with_body("imaginary content")
@@ -154,11 +162,12 @@ fn it_pull_remote_file_output_to_stdout() {
 fn it_push_content_from_stdin_to_remote_file() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
 
-    let base_url = &mockito::server_url();
+    let mut server = mockito::Server::new();
+    let base_url = &server.url();
 
-    let (m1, m2) = mock_successful_authentication_requests(base_url);
+    let (m1, m2) = mock_successful_authentication_requests(&mut server);
 
-    let m3 = mock("POST", "/files/request-upload-url")
+    let m3 = server.mock("POST", "/files/request-upload-url")
         .match_body(r#"{"filename":"some-remote-filename"}"#)
         .with_status(200)
         .with_header("content-type", "application/json")
@@ -187,7 +196,8 @@ fn it_push_content_from_stdin_to_remote_file() {
         .to_string())
         .create();
 
-    let m4 = mock("POST", "/some/imaginary/upload/url")
+    let m4 = server
+        .mock("POST", "/some/imaginary/upload/url")
         .match_header(
             "Content-Type",
             Matcher::Regex("^multipart/form-data(;.*)?".to_string()),
@@ -222,8 +232,13 @@ fn it_push_content_from_stdin_to_remote_file() {
         .stdout("Successfully pushed file, using as remote name \"some-remote-filename\"\n");
 }
 
-fn mock_successful_authentication_requests(base_url: &str) -> (mockito::Mock, mockito::Mock) {
-    let m1 = mock("GET", "/auth/request-challenge?username=test_user")
+fn mock_successful_authentication_requests(
+    server: &mut mockito::ServerGuard,
+) -> (mockito::Mock, mockito::Mock) {
+    let base_url = server.url();
+
+    let m1 = server
+        .mock("GET", "/auth/request-challenge?username=test_user")
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(
@@ -246,7 +261,8 @@ fn mock_successful_authentication_requests(base_url: &str) -> (mockito::Mock, mo
         )
         .create();
 
-    let m2 = mock("POST", "/auth/answer-challenge")
+    let m2 = server
+        .mock("POST", "/auth/answer-challenge")
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(
@@ -272,8 +288,11 @@ fn mock_successful_authentication_requests(base_url: &str) -> (mockito::Mock, mo
     (m1, m2)
 }
 
-fn mock_list_files_happy_path(base_url: &str, username: &str) -> mockito::Mock {
-    mock("GET", "/files/")
+fn mock_list_files_happy_path(server: &mut mockito::ServerGuard, username: &str) -> mockito::Mock {
+    let base_url = server.url();
+
+    server
+        .mock("GET", "/files/")
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(
