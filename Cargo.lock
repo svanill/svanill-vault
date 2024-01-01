@@ -2892,7 +2892,7 @@ checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
 
 [[package]]
 name = "svanill-vault-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -2918,7 +2918,7 @@ dependencies = [
 
 [[package]]
 name = "svanill-vault-server"
-version = "0.6.2"
+version = "0.6.4"
 dependencies = [
  "actix-cors",
  "actix-http",
