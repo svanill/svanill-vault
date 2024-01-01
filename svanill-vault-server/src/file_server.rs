@@ -189,10 +189,18 @@ impl FileServer {
         // https://s3.eu-central-1.amazonaws.com/some-bucketname/...&X-Amz-Algorithm...
         // to https://some-bucketname.s3.eu-central-1.amazonaws.com
         // Protocol could be http/https, domain could also be an ip with port, etc...
+        // There must be an sdk function to get it, but I can't find it.
         let v: Vec<&str> = retrieve_url.splitn(4, '/').collect();
 
-        if let [protocol, _, domain, _] = &v[..] {
-            let upload_url = [protocol, "//", &self.bucket, ".", domain].join("");
+        if let [protocol, _, mut domain, _] = &v[..] {
+            let final_domain: String;
+
+            if !domain.starts_with(&self.bucket) {
+                final_domain = format!("{}.{}", &self.bucket, &domain);
+                domain = &final_domain;
+            }
+
+            let upload_url = [protocol, "//", domain].join("");
             Ok((upload_url, retrieve_url.to_owned(), form_data))
         } else {
             Err(FileServerError::PolicyDataError(
