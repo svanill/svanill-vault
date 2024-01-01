@@ -139,8 +139,8 @@ jobs:
       - name: Tag the docker image with the new version
         if: steps.is-new-version.outputs.result != ''
         run: |
-          docker tag ghcr.io/riquito/svanill-vault-server:latest ghcr.io/riquito/svanill-vault-server:${{ steps.server-version-by-cargo.outputs.version }}
-          docker push ghcr.io/riquito/svanill-vault-server:${{ steps.server-version-by-cargo.outputs.version }}
+          docker tag ghcr.io/${{ github.repository_owner }}/svanill-vault-server:latest ghcr.io/${{ github.repository_owner }}/svanill-vault-server:${{ steps.server-version-by-cargo.outputs.version }}
+          docker push ghcr.io/${{ github.repository_owner }}/svanill-vault-server:${{ steps.server-version-by-cargo.outputs.version }}
 
   release:
     needs: dist
