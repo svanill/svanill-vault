@@ -10,7 +10,7 @@ readme = "README.md"
 
 [dependencies]
 svanill-vault-openapi = { path = "../svanill-vault-openapi", version = "0.1" }
-actix-web = { version = "4.3.1", features = ["rustls"] }
+actix-web = { version = "4.4.1", features = ["rustls"] }
 actix-http = "3.5.1"
 actix-cors = "0.6.5"
 actix-web-httpauth = "0.8.1"
