@@ -2952,7 +2952,7 @@ dependencies = [
  "log",
  "lru-cache",
  "reqwest",
- "ring 0.16.20",
+ "ring 0.17.7",
  "sentry",
  "sentry-actix",
  "serde",
