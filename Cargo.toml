@@ -1,5 +1,5 @@
 [workspace]
-
+resolver = "2"
 members = [
     "svanill-vault-cli",
     "svanill-vault-openapi",
