@@ -39,6 +39,7 @@ pub fn run(listener: TcpListener, data: AppData) -> Result<Server, std::io::Erro
                 http::header::ACCEPT,
                 http::header::CONTENT_TYPE,
             ])
+            .block_on_origin_mismatch(true)
             .max_age(86400);
 
         cors_handler = if cors_origin == "*" {
