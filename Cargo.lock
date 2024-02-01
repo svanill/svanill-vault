@@ -151,7 +151,7 @@ dependencies = [
  "impl-more",
  "pin-project-lite",
  "rustls 0.21.10",
- "rustls-webpki 0.101.7",
+ "rustls-webpki",
  "tokio",
  "tokio-rustls 0.23.4",
  "tokio-util",
@@ -1629,7 +1629,6 @@ dependencies = [
  "rustls-native-certs",
  "tokio",
  "tokio-rustls 0.24.0",
- "webpki-roots 0.23.0",
 ]
 
 [[package]]
@@ -2404,7 +2403,7 @@ checksum = "f9d5a6813c0759e4609cd494e8e725babae6a2ca7b62a5536a13daaec6fcb7ba"
 dependencies = [
  "log",
  "ring 0.17.7",
- "rustls-webpki 0.101.7",
+ "rustls-webpki",
  "sct",
 ]
 
@@ -2427,16 +2426,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0864aeff53f8c05aa08d86e5ef839d3dfcf07aeba2db32f12db0ef716e87bd55"
 dependencies = [
  "base64 0.13.1",
-]
-
-[[package]]
-name = "rustls-webpki"
-version = "0.100.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e98ff011474fa39949b7e5c0428f9b4937eda7da7848bbb947786b7be0b27dab"
-dependencies = [
- "ring 0.16.20",
- "untrusted 0.7.1",
 ]
 
 [[package]]
@@ -2897,8 +2886,6 @@ dependencies = [
  "hex",
  "hmac",
  "http 0.2.9",
- "hyper",
- "hyper-rustls",
  "libsqlite3-sys",
  "log",
  "lru-cache",
@@ -3339,7 +3326,7 @@ dependencies = [
  "log",
  "once_cell",
  "rustls 0.21.10",
- "rustls-webpki 0.101.7",
+ "rustls-webpki",
  "url",
  "webpki-roots 0.25.3",
 ]
@@ -3519,15 +3506,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "368bfe657969fb01238bb756d351dcade285e0f6fcbd36dcb23359a5169975be"
 dependencies = [
  "webpki",
-]
-
-[[package]]
-name = "webpki-roots"
-version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa54963694b65584e170cf5dc46aeb4dcaa5584e652ff5f3952e56d66aff0125"
-dependencies = [
- "rustls-webpki 0.100.2",
 ]
 
 [[package]]
