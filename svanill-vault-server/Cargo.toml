@@ -45,7 +45,7 @@ aws-smithy-types = "1.1.1"
 http = "0.2.9"
 
 [dependencies.sentry]
-version = "0.32.1"
+version = "0.32.2"
 default-features = false
 features = ["rustls", "backtrace", "contexts", "panic", "reqwest", "tracing"]
 
