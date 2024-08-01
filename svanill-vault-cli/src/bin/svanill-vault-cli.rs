@@ -164,7 +164,7 @@ fn main() -> Result<()> {
 
     let challenge = request_challenge(&conf)?;
 
-    if opt.answer.is_none() && conf.challenges.get(&challenge).is_none() {
+    if opt.answer.is_none() && !conf.challenges.contains_key(&challenge) {
         eprintln!("Cannot authenticate, missing answer to the server's challenge.");
         eprintln!("Decrypt the challenge to get the answer:");
         eprintln!("  svanill -i <(echo {challenge}) dec");
