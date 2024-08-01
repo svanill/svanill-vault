@@ -104,7 +104,9 @@ fn setup_log(level: Option<log::Level>) {
             ",{level},aws_config={level},actix_cors={level},actix_rt={level},actix_http={level},actix_web={level},actix_server={level}"
         ).unwrap();
 
-        env::set_var("RUST_LOG", rust_log);
+        unsafe {
+            env::set_var("RUST_LOG", rust_log);
+        }
     }
 
     env_logger::init();
@@ -156,15 +158,21 @@ async fn main() -> Result<()> {
     });
 
     if let Some(region) = opt.s3_region {
-        env::set_var("AWS_DEFAULT_REGION", region);
+        unsafe {
+            env::set_var("AWS_DEFAULT_REGION", region);
+        }
     }
 
     if let Some(access_key_id) = opt.s3_access_key_id {
-        env::set_var("AWS_ACCESS_KEY_ID", access_key_id);
+        unsafe {
+            env::set_var("AWS_ACCESS_KEY_ID", access_key_id);
+        }
     }
 
     if let Some(secret_access_key) = opt.s3_secret_access_key {
-        env::set_var("AWS_SECRET_ACCESS_KEY", secret_access_key);
+        unsafe {
+            env::set_var("AWS_SECRET_ACCESS_KEY", secret_access_key);
+        }
     }
 
     // Check in order:
@@ -178,7 +186,7 @@ async fn main() -> Result<()> {
         .await
         .unwrap_or(aws_sdk_s3::config::Region::from_static("us-east-1"));
 
-    let aws_sdk_conf = aws_config::defaults(BehaviorVersion::v2023_11_09())
+    let aws_sdk_conf = aws_config::defaults(BehaviorVersion::v2024_03_28())
         .region(region.clone())
         .load()
         .await;
