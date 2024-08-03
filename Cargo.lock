@@ -46,7 +46,7 @@ dependencies = [
  "actix-tls",
  "actix-utils",
  "ahash",
- "base64 0.22.0",
+ "base64 0.22.1",
  "bitflags 2.4.1",
  "brotli",
  "bytes",
@@ -228,7 +228,7 @@ checksum = "456348ed9dcd72a13a1f4a660449fafdecee9ac8205552e286809eb5b0b29bd3"
 dependencies = [
  "actix-utils",
  "actix-web",
- "base64 0.22.0",
+ "base64 0.22.1",
  "futures-core",
  "futures-util",
  "log",
