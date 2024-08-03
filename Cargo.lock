@@ -56,7 +56,7 @@ dependencies = [
  "flate2",
  "futures-core",
  "h2",
- "http 0.2.9",
+ "http 0.2.12",
  "httparse",
  "httpdate",
  "itoa",
@@ -92,7 +92,7 @@ checksum = "eb60846b52c118f2f04a56cc90880a274271c489b2498623d58176f8ca21fa80"
 dependencies = [
  "bytestring",
  "firestorm",
- "http 0.2.9",
+ "http 0.2.12",
  "log",
  "regex",
  "serde",
@@ -405,7 +405,7 @@ dependencies = [
  "bytes",
  "fastrand",
  "hex",
- "http 0.2.9",
+ "http 0.2.12",
  "hyper",
  "ring 0.17.7",
  "time",
@@ -442,7 +442,7 @@ dependencies = [
  "aws-types",
  "bytes",
  "fastrand",
- "http 0.2.9",
+ "http 0.2.12",
  "http-body 0.4.5",
  "percent-encoding",
  "pin-project-lite",
@@ -470,7 +470,7 @@ dependencies = [
  "aws-smithy-xml",
  "aws-types",
  "bytes",
- "http 0.2.9",
+ "http 0.2.12",
  "http-body 0.4.5",
  "once_cell",
  "percent-encoding",
@@ -495,7 +495,7 @@ dependencies = [
  "aws-smithy-types",
  "aws-types",
  "bytes",
- "http 0.2.9",
+ "http 0.2.12",
  "once_cell",
  "regex-lite",
  "tracing",
@@ -517,7 +517,7 @@ dependencies = [
  "aws-smithy-types",
  "aws-types",
  "bytes",
- "http 0.2.9",
+ "http 0.2.12",
  "once_cell",
  "regex-lite",
  "tracing",
@@ -540,7 +540,7 @@ dependencies = [
  "aws-smithy-types",
  "aws-smithy-xml",
  "aws-types",
- "http 0.2.9",
+ "http 0.2.12",
  "once_cell",
  "regex-lite",
  "tracing",
@@ -562,7 +562,7 @@ dependencies = [
  "form_urlencoded",
  "hex",
  "hmac",
- "http 0.2.9",
+ "http 0.2.12",
  "http 1.0.0",
  "once_cell",
  "p256",
@@ -598,7 +598,7 @@ dependencies = [
  "crc32c",
  "crc32fast",
  "hex",
- "http 0.2.9",
+ "http 0.2.12",
  "http-body 0.4.5",
  "md-5",
  "pin-project-lite",
@@ -630,7 +630,7 @@ dependencies = [
  "bytes",
  "bytes-utils",
  "futures-core",
- "http 0.2.9",
+ "http 0.2.12",
  "http-body 0.4.5",
  "once_cell",
  "percent-encoding",
@@ -656,7 +656,7 @@ checksum = "020468b04f916b36e0a791c4ebf80777ad2c25d8b9ebb8db14939e98a37abec0"
 dependencies = [
  "assert-json-diff 1.1.0",
  "aws-smithy-runtime-api",
- "http 0.2.9",
+ "http 0.2.12",
  "pretty_assertions",
  "regex-lite",
  "roxmltree",
@@ -688,7 +688,7 @@ dependencies = [
  "bytes",
  "fastrand",
  "h2",
- "http 0.2.9",
+ "http 0.2.12",
  "http-body 0.4.5",
  "http-body 1.0.0",
  "httparse",
@@ -715,7 +715,7 @@ dependencies = [
  "aws-smithy-async",
  "aws-smithy-types",
  "bytes",
- "http 0.2.9",
+ "http 0.2.12",
  "http 1.0.0",
  "pin-project-lite",
  "tokio",
@@ -733,7 +733,7 @@ dependencies = [
  "bytes",
  "bytes-utils",
  "futures-core",
- "http 0.2.9",
+ "http 0.2.12",
  "http 1.0.0",
  "http-body 0.4.5",
  "http-body 1.0.0",
@@ -1534,7 +1534,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "futures-util",
- "http 0.2.9",
+ "http 0.2.12",
  "indexmap",
  "slab",
  "tokio",
@@ -1609,9 +1609,9 @@ dependencies = [
 
 [[package]]
 name = "http"
-version = "0.2.9"
+version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd6effc99afb63425aff9b05836f029929e345a6148a14b7ecd5ab67af944482"
+checksum = "601cbb57e577e2f5ef5be8e7b83f0f63994f25aa94d673e54a92d5c516d101f1"
 dependencies = [
  "bytes",
  "fnv",
@@ -1636,7 +1636,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d5f38f16d184e36f2408a55281cd658ecbd3ca05cce6d6510a176eca393e26d1"
 dependencies = [
  "bytes",
- "http 0.2.9",
+ "http 0.2.12",
  "pin-project-lite",
 ]
 
@@ -1692,7 +1692,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "h2",
- "http 0.2.9",
+ "http 0.2.12",
  "http-body 0.4.5",
  "httparse",
  "httpdate",
@@ -1711,7 +1711,7 @@ version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0646026eb1b3eea4cd9ba47912ea5ce9cc07713d105b1a14698f4e6433d348b7"
 dependencies = [
- "http 0.2.9",
+ "http 0.2.12",
  "hyper",
  "log",
  "rustls 0.21.10",
@@ -2388,7 +2388,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "h2",
- "http 0.2.9",
+ "http 0.2.12",
  "http-body 0.4.5",
  "hyper",
  "hyper-rustls",
@@ -3037,7 +3037,7 @@ dependencies = [
  "futures",
  "hex",
  "hmac",
- "http 0.2.9",
+ "http 1.0.0",
  "libsqlite3-sys",
  "log",
  "lru-cache",
