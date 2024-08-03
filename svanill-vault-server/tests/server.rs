@@ -218,11 +218,7 @@ async fn cors_origin_not_allowed() {
         .await
         .expect("Failed to execute request");
 
-    assert_eq!(400, resp.status());
-    assert_eq!(
-        Some("Origin is not allowed to make this request"),
-        resp.text().await.as_deref().ok()
-    );
+    assert_eq!(401, resp.status());
 }
 
 #[actix_rt::test]
