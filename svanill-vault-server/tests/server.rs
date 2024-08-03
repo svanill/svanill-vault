@@ -1,5 +1,4 @@
 use crate::file_server::FileServer;
-use actix_http::StatusCode;
 use async_trait::async_trait;
 use aws_config::Region;
 use aws_credential_types::Credentials;
@@ -11,6 +10,7 @@ use diesel::{
     RunQueryDsl, SqliteConnection,
 };
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
+use http::StatusCode;
 use r2d2::Pool;
 use ring::hmac;
 use ring::test::rand::FixedByteRandom;
