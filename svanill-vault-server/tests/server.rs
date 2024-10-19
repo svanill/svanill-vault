@@ -125,7 +125,7 @@ async fn noauth_noroute_must_return_401() {
     let client = reqwest::Client::new();
 
     let resp = client
-        .get(&format!("{}/not-exist", &address))
+        .get(format!("{}/not-exist", &address))
         .header("Authorization", "Bearer dummy-invalid-token")
         .send()
         .await
@@ -149,7 +149,7 @@ async fn auth_noroute_noget_must_return_405() {
     let client = reqwest::Client::new();
     let resp = client
         // use a "not GET" request on an unexistent route
-        .patch(&format!("{}/not-exist", &address))
+        .patch(format!("{}/not-exist", &address))
         .header("Authorization", "Bearer dummy-valid-token")
         .send()
         .await
@@ -172,7 +172,7 @@ async fn auth_noroute_get_must_return_404() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .get(&format!("{}/not-exist", &address))
+        .get(format!("{}/not-exist", &address))
         .header("Authorization", "Bearer dummy-valid-token")
         .send()
         .await
@@ -193,7 +193,7 @@ async fn root() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .get(&format!("{}/", &address))
+        .get(format!("{}/", &address))
         .send()
         .await
         .expect("Failed to execute request");
@@ -212,7 +212,7 @@ async fn cors_origin_not_allowed() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .request(reqwest::Method::OPTIONS, &format!("{}/", &address))
+        .request(reqwest::Method::OPTIONS, format!("{}/", &address))
         .header("Origin", "svanill-not-allowed-origin.test")
         .send()
         .await
@@ -227,7 +227,7 @@ async fn cors_origin_request_method_missing() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .request(reqwest::Method::OPTIONS, &format!("{}/", &address))
+        .request(reqwest::Method::OPTIONS, format!("{}/", &address))
         .header("Origin", "https://example.com")
         .send()
         .await
@@ -243,7 +243,7 @@ async fn cors_success() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .request(reqwest::Method::OPTIONS, &format!("{}/", &address))
+        .request(reqwest::Method::OPTIONS, format!("{}/", &address))
         .header("Origin", "https://example.com")
         .header("Access-Control-Request-Method", "GET")
         .send()
@@ -260,7 +260,7 @@ async fn cors_any_origin_success() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .request(reqwest::Method::OPTIONS, &format!("{}/", &address))
+        .request(reqwest::Method::OPTIONS, format!("{}/", &address))
         .header("Origin", "https://foobar.example.test")
         .header("Access-Control-Request-Method", "GET")
         .send()
@@ -311,7 +311,7 @@ async fn get_auth_challenge_no_username_provided() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .get(&format!("{}/auth/request-challenge", &address))
+        .get(format!("{}/auth/request-challenge", &address))
         .send()
         .await
         .expect("Failed to execute request");
@@ -331,7 +331,7 @@ async fn get_auth_challenge_username_not_found() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .get(&format!(
+        .get(format!(
             "{}/auth/request-challenge?username=notfound",
             &address
         ))
@@ -355,7 +355,7 @@ async fn get_auth_challenge_ok() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .get(&format!(
+        .get(format!(
             "{}/auth/request-challenge?username=test_user_2",
             &address
         ))
@@ -384,7 +384,7 @@ async fn answer_auth_challenge_username_not_found() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .post(&format!("{}/auth/answer-challenge", &address))
+        .post(format!("{}/auth/answer-challenge", &address))
         .json(&payload)
         .send()
         .await
@@ -411,7 +411,7 @@ async fn answer_auth_challenge_wrong_answer() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .post(&format!("{}/auth/answer-challenge", &address))
+        .post(format!("{}/auth/answer-challenge", &address))
         .json(&payload)
         .send()
         .await
@@ -438,7 +438,7 @@ async fn answer_auth_challenge_ok() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .post(&format!("{}/auth/answer-challenge", &address))
+        .post(format!("{}/auth/answer-challenge", &address))
         .json(&payload)
         .send()
         .await
@@ -454,7 +454,7 @@ async fn answer_auth_challenge_ok() {
 
     // Do the same request again and verify that every token is unique
     let resp2 = client
-        .post(&format!("{}/auth/answer-challenge", &address))
+        .post(format!("{}/auth/answer-challenge", &address))
         .json(&payload)
         .send()
         .await
@@ -502,7 +502,7 @@ async fn request_upload_url_ok() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .post(&format!("{}/files/request-upload-url", &address))
+        .post(format!("{}/files/request-upload-url", &address))
         .header("Authorization", "Bearer dummy-valid-token")
         .json(&payload)
         .send()
@@ -537,7 +537,7 @@ async fn request_upload_url_empty_filename() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .post(&format!("{}/files/request-upload-url", &address))
+        .post(format!("{}/files/request-upload-url", &address))
         .header("Authorization", "Bearer dummy-valid-token")
         .json(&payload)
         .send()
@@ -564,7 +564,7 @@ async fn request_upload_url_wrong_payload() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .post(&format!("{}/files/request-upload-url", &address))
+        .post(format!("{}/files/request-upload-url", &address))
         .header("Authorization", "Bearer dummy-valid-token")
         .body(payload)
         .send()
@@ -636,7 +636,7 @@ async fn list_user_files_ok() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .get(&format!("{}/files/", &address))
+        .get(format!("{}/files/", &address))
         .header("Authorization", "Bearer dummy-valid-token")
         .send()
         .await
@@ -702,7 +702,7 @@ async fn list_user_files_s3_error() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .get(&format!("{}/files/", &address))
+        .get(format!("{}/files/", &address))
         .header("Authorization", "Bearer dummy-valid-token")
         .send()
         .await
@@ -749,7 +749,7 @@ async fn delete_files_s3_error() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .delete(&format!("{}/files/?filename=doesnotmatter", &address))
+        .delete(format!("{}/files/?filename=doesnotmatter", &address))
         .header("Authorization", "Bearer dummy-valid-token")
         .send()
         .await
@@ -796,7 +796,7 @@ async fn delete_files_missing_filename() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .delete(&format!("{}/files/", &address))
+        .delete(format!("{}/files/", &address))
         .header("Authorization", "Bearer dummy-valid-token")
         .send()
         .await
@@ -843,7 +843,7 @@ async fn delete_files_ok() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .delete(&format!(
+        .delete(format!(
             "{}/files/?filename=same-wheter-it-exist-or-not",
             &address
         ))
