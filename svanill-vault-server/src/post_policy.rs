@@ -49,7 +49,7 @@ fn format_date_time(time: DateTime) -> Result<String, String> {
 
 struct Condition<'a>((&'a str, &'a str, &'a str));
 
-impl<'a> Serialize for Condition<'a> {
+impl Serialize for Condition<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
