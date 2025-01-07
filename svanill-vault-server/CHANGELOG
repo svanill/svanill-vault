@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.5] - 2025-01-07
+### Update dependencies
+
 ## [0.6.4] - 2023-12-31
 ### Update dependencies, in particular most aws libraries are 1.x
 
