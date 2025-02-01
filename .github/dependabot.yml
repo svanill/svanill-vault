@@ -1,11 +1,11 @@
 version: 2
 updates:
   - package-ecosystem: cargo
-    directory: '/'
+    directory: "/"
     schedule:
-      interval: 'monthly'
-      day: 'thursday'
-      time: '02:00'
+      interval: "monthly"
+      day: "thursday"
+      time: "02:00"
     open-pull-requests-limit: 10
     groups:
       aws:
@@ -15,7 +15,7 @@ updates:
       actix:
         patterns: ["actix*"]
 
-  - package-ecosystem: 'github-actions'
-    directory: '/'
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
-      interval: 'monthly'
+      interval: "monthly"
