@@ -2867,13 +2867,13 @@ dependencies = [
 
 [[package]]
 name = "sentry-actix"
-version = "0.35.0"
+version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8c2610e32ab81cc376b6b4310101cff6636063b12f3f993884d0a8ec81c6187"
+checksum = "4df26563afddf6fa2e158def69d70bbc2e60bd2b158ea6077a0f51358da31806"
 dependencies = [
  "actix-web",
  "futures-util",
- "sentry-core 0.35.0",
+ "sentry-core 0.36.0",
 ]
 
 [[package]]
@@ -2917,13 +2917,13 @@ dependencies = [
 
 [[package]]
 name = "sentry-core"
-version = "0.35.0"
+version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9f8b6dcd4fbae1e3e22b447f32670360b27e31b62ab040f7fb04e0f80c04d92"
+checksum = "653942e6141f16651273159f4b8b1eaeedf37a7554c00cd798953e64b8a9bf72"
 dependencies = [
  "once_cell",
  "rand",
- "sentry-types 0.35.0",
+ "sentry-types 0.36.0",
  "serde",
  "serde_json",
 ]
@@ -2969,9 +2969,9 @@ dependencies = [
 
 [[package]]
 name = "sentry-types"
-version = "0.35.0"
+version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a71ed3a389948a6a6d92b98e997a2723ca22f09660c5a7b7388ecd509a70a527"
+checksum = "2d4203359e60724aa05cf2385aaf5d4f147e837185d7dd2b9ccf1ee77f4420c8"
 dependencies = [
  "debugid",
  "hex",
