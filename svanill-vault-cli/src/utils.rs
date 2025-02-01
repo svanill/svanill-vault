@@ -6,11 +6,11 @@ pub fn gen_random_filename() -> String {
     0123456789";
 
     const FILENAME_LEN: usize = 24;
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     (0..FILENAME_LEN)
         .map(|_| {
-            let idx = rng.gen_range(0..CHARSET.len());
+            let idx = rng.random_range(0..CHARSET.len());
             CHARSET[idx] as char
         })
         .collect::<String>()
