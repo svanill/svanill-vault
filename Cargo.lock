@@ -417,7 +417,7 @@ dependencies = [
  "hex",
  "http 0.2.12",
  "hyper 0.14.32",
- "ring 0.17.11",
+ "ring 0.17.12",
  "time",
  "tokio",
  "tracing",
@@ -577,7 +577,7 @@ dependencies = [
  "once_cell",
  "p256",
  "percent-encoding",
- "ring 0.17.11",
+ "ring 0.17.12",
  "sha2",
  "subtle",
  "time",
@@ -2720,9 +2720,9 @@ dependencies = [
 
 [[package]]
 name = "ring"
-version = "0.17.11"
+version = "0.17.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da5349ae27d3887ca812fb375b45a4fbb36d8d12d2df394968cd86e35683fe73"
+checksum = "ed9b823fa29b721a59671b41d6b06e66b29e0628e207e8b1c3ceeda701ec928d"
 dependencies = [
  "cc",
  "cfg-if",
@@ -2789,7 +2789,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9d5a6813c0759e4609cd494e8e725babae6a2ca7b62a5536a13daaec6fcb7ba"
 dependencies = [
  "log",
- "ring 0.17.11",
+ "ring 0.17.12",
  "rustls-webpki",
  "sct",
 ]
@@ -2821,7 +2821,7 @@ version = "0.101.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b6275d1ee7a1cd780b64aca7726599a1dbc893b1e64144529e55c3c2f745765"
 dependencies = [
- "ring 0.17.11",
+ "ring 0.17.12",
  "untrusted 0.9.0",
 ]
 
@@ -3321,7 +3321,7 @@ dependencies = [
  "log",
  "lru-cache",
  "reqwest",
- "ring 0.17.11",
+ "ring 0.17.12",
  "sentry",
  "sentry-actix",
  "serde",
