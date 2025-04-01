@@ -35,7 +35,7 @@ sha2 = "0.10.8"
 color-backtrace = "0.7.0"
 reqwest = { version = "0.11.27", default-features = false, features = ["blocking", "gzip", "multipart", "json", "rustls-tls", "rustls-tls-webpki-roots"] }
 sentry-actix = "0.36.0"
-async-trait = "0.1.86"
+async-trait = "0.1.88"
 aws-config = "1.1.4"
 aws-credential-types = "1.2.1"
 aws-sigv4 = "1.2.7"
