@@ -186,7 +186,7 @@ async fn main() -> Result<()> {
         .await
         .unwrap_or(aws_sdk_s3::config::Region::from_static("us-east-1"));
 
-    let aws_sdk_conf = aws_config::defaults(BehaviorVersion::v2024_03_28())
+    let aws_sdk_conf = aws_config::defaults(BehaviorVersion::v2025_01_17())
         .region(region.clone())
         .load()
         .await;
