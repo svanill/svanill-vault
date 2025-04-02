@@ -13,7 +13,6 @@ use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
 use http::StatusCode;
 use r2d2::Pool;
 use ring::hmac;
-use ring::test::rand::FixedByteRandom;
 use std::net::TcpListener;
 use svanill_vault_openapi::{
     AnswerUserChallengeRequest, AnswerUserChallengeResponse, AskForTheChallengeResponse,
@@ -43,8 +42,7 @@ fn setup_tokens_cache(token: &str, username: &str) -> TokensCache {
 }
 
 fn setup_fake_random_key() -> hmac::Key {
-    let rng = FixedByteRandom { byte: 0 };
-    hmac::Key::generate(hmac::HMAC_SHA256, &rng).expect("Cannot generate cryptographyc key")
+    hmac::Key::new(hmac::HMAC_SHA256, &[])
 }
 
 #[async_trait]
