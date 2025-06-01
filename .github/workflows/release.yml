@@ -186,7 +186,7 @@ jobs:
 
       - name: Push tag/create release point
         if: steps.is-new-version.outputs.result != ''
-        uses: anothrNick/github-tag-action@1.71.0
+        uses: anothrNick/github-tag-action@1.73.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CUSTOM_TAG: ${{ steps.is-new-version.outputs.result }}
