@@ -23,4 +23,4 @@ md-5 = "0.10.6"
 
 [dev-dependencies]
 assert_cmd = "2.0.17"
-mockito = "1.6.1"
+mockito = "1.7.0"
