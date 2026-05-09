@@ -8,7 +8,7 @@ fn it_output_version() {
 
     let assert = cmd.args(["-V"]).assert();
 
-    assert.success().stdout("svanill-vault-cli 0.1.2\n");
+    assert.success().stdout("svanill-vault-cli 0.1.3\n");
 }
 
 #[test]
