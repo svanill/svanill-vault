@@ -36,12 +36,12 @@ color-backtrace = "0.7.0"
 reqwest = { version = "0.12.4", default-features = false, features = ["blocking", "gzip", "multipart", "json", "rustls-tls", "rustls-tls-webpki-roots"] }
 sentry-actix = "0.37.0"
 async-trait = "0.1.88"
-aws-config = "1.1.4"
-aws-credential-types = "1.2.7"
-aws-sigv4 = "1.3.3"
-aws-types = "1.3.8"
-aws-sdk-s3 = "1.14.0"
-aws-smithy-types = "1.1.1"
+aws-config = "1.8.16"
+aws-credential-types = "1.2.14"
+aws-sigv4 = "1.4.3"
+aws-types = "1.3.15"
+aws-sdk-s3 = "1.132.0"
+aws-smithy-types = "1.4.7"
 http = "1.3.1"
 
 [dependencies.sentry]
@@ -50,8 +50,8 @@ default-features = false
 features = ["rustls", "backtrace", "contexts", "panic", "reqwest", "tracing"]
 
 [dev-dependencies]
-aws-smithy-http = "0.62.3"
-aws-smithy-runtime = { version = "1.9.2", features=["client", "test-util"] }
+aws-smithy-http = "0.63.6"
+aws-smithy-runtime = { version = "1.11.1", features=["client", "test-util"] }
 tokio = "1.44.2"
 ctor = "0.4.2"
 actix-rt = "2.10.0"
