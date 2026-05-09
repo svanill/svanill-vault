@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::RngExt;
 
 pub fn gen_random_filename() -> String {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
