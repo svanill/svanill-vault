@@ -73,9 +73,9 @@ pub enum VaultError {
     UserDoesNotExist,
     DatabaseError(#[from] diesel::result::Error),
     ChallengeMismatchError,
-    S3Error(FileServerError),
+    S3Error(Box<FileServerError>),
     UnexpectedError(String),
-    PolicyDataError(FileServerError),
+    PolicyDataError(Box<FileServerError>),
 }
 
 impl From<&VaultError> for ApiError {

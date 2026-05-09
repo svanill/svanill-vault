@@ -165,7 +165,7 @@ async fn request_upload_url(
     let (upload_url, retrieve_url, form_data) = s3_fs
         .get_post_policy_data(username, filename)
         .await
-        .map_err(VaultError::PolicyDataError)?;
+        .map_err(|e| VaultError::PolicyDataError(Box::new(e)))?;
 
     Ok(HttpResponse::Ok().json(
         serde_json::from_value::<RequestUploadUrlResponse>(json!({
@@ -201,7 +201,7 @@ async fn list_user_files(
     let files = s3_fs
         .get_files_list(&username)
         .await
-        .map_err(VaultError::S3Error)?;
+        .map_err(|e| VaultError::S3Error(Box::new(e)))?;
 
     Ok(HttpResponse::Ok().json(
         serde_json::from_value::<RetrieveListOfUserFilesResponse>(json!({
@@ -246,7 +246,7 @@ async fn remove_file(
     s3_fs
         .remove_file(username, q.filename.as_ref().unwrap())
         .await
-        .map_err(VaultError::S3Error)?;
+        .map_err(|e| VaultError::S3Error(Box::new(e)))?;
 
     Ok(HttpResponse::Ok().json(
         serde_json::from_value::<RemoveFileResponse>(json!({
