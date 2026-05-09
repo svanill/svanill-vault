@@ -177,6 +177,7 @@ impl FileServer {
             .set_key(&key)
             .set_content_length_range(bytes_range_min, bytes_range_max)
             .set_expiration(&expiration_date)
+            .set_checksum_algorithm_sha256()
             .build_form_data()
             .map_err(FileServerError::PolicyDataError)?;
 

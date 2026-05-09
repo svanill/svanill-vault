@@ -151,6 +151,16 @@ impl<'a> PostPolicy<'a> {
         self
     }
 
+    /// Require SHA-256 checksum: S3 will verify the `x-amz-checksum-sha256`
+    /// value the client provides against the actual uploaded bytes.
+    pub fn set_checksum_algorithm_sha256(mut self) -> Self {
+        self.form_data
+            .insert("x-amz-checksum-algorithm".to_string(), "SHA256".to_string());
+        self = self.append_policy("eq", "$x-amz-checksum-algorithm", "SHA256");
+        self = self.append_policy("starts-with", "$x-amz-checksum-sha256", "");
+        self
+    }
+
     /// Set content length range policy condition
     pub fn set_content_length_range(mut self, min_length: u64, max_length: u64) -> Self {
         self.content_length_range = Some((min_length, max_length));
@@ -479,5 +489,40 @@ mod tests {
         let policy: serde_json::Value = serde_json::from_slice(&policy_as_vec_u8).unwrap();
         let conditions = policy["conditions"].as_array().unwrap();
         assert!(conditions.contains(&serde_json::json!(["starts-with", "$key", "foo"])));
+    }
+
+    #[test]
+    fn set_checksum_algorithm_sha256() {
+        let expiration_date = DateTime::from_str("2020-01-01T01:02:03Z", Format::DateTime).unwrap();
+
+        let res = PostPolicy::default()
+            .set_bucket_name(BUCKET)
+            .set_region(&REGION)
+            .set_access_key_id(ACCESS_KEY_ID)
+            .set_secret_access_key(SECRET_ACCESS_KEY)
+            .set_key(OBJECT_KEY)
+            .set_expiration(&expiration_date)
+            .set_checksum_algorithm_sha256()
+            .build_form_data();
+
+        assert!(res.is_ok());
+        let form_data = res.unwrap();
+
+        assert_eq!(form_data.get("x-amz-checksum-algorithm").unwrap(), "SHA256");
+
+        let policy_as_base64 = form_data.get("policy").unwrap();
+        let policy_as_vec_u8 = general_purpose::STANDARD.decode(policy_as_base64).unwrap();
+        let policy: serde_json::Value = serde_json::from_slice(&policy_as_vec_u8).unwrap();
+        let conditions = policy["conditions"].as_array().unwrap();
+        assert!(conditions.contains(&serde_json::json!([
+            "eq",
+            "$x-amz-checksum-algorithm",
+            "SHA256"
+        ])));
+        assert!(conditions.contains(&serde_json::json!([
+            "starts-with",
+            "$x-amz-checksum-sha256",
+            ""
+        ])));
     }
 }
